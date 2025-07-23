@@ -15,7 +15,7 @@ notas = {}
 # Diccionario de alumnos por año
 alumnos_por_anio = {
     'sexto': [
-        "GUADALUPE IMAR",
+        "GUADALUPE AIMAR",
         "JUAN CRUZ ANTONELLO VEGA",
         "SANTINO ARNOLETTO FERRERO",
         "ANA PAULA BALDONCINI",
@@ -30,7 +30,7 @@ alumnos_por_anio = {
         "LOURDES CRISTALLI",
         "RAMIRO CRISTALLI",
         "SEBASTIAN DAVICO FLAUMER",
-        "CHIARA MARIA AYELEN DUARTE CUEVA",
+        "CHIARA DUARTE CUEVA",
         "JUAN CRUZ FANTONI",
         "LUCÍA MARÍA FRARESSO",
         "VICTORIA FRARESSO",
