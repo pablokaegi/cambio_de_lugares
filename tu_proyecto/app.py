@@ -1,3 +1,7 @@
+
+# ...existing code...
+
+# (Pega aquí la función conformidad() después de la definición de app = Flask(__name__))
 from flask import Flask, render_template, request, redirect, url_for, flash
 
 import random
@@ -15,7 +19,7 @@ notas = {}
 # Diccionario de alumnos por año
 alumnos_por_anio = {
     'sexto': [
-        "GUADALUPE IMAR",
+        "GUADALUPE AIMAR",
         "JUAN CRUZ ANTONELLO VEGA",
         "SANTINO ARNOLETTO FERRERO",
         "ANA PAULA BALDONCINI",
@@ -30,7 +34,7 @@ alumnos_por_anio = {
         "LOURDES CRISTALLI",
         "RAMIRO CRISTALLI",
         "SEBASTIAN DAVICO FLAUMER",
-        "CHIARA MARIA AYELEN DUARTE CUEVA",
+        "CHIARA DUARTE CUEVA",
         "JUAN CRUZ FANTONI",
         "LUCÍA MARÍA FRARESSO",
         "VICTORIA FRARESSO",
@@ -282,7 +286,53 @@ def resultados():
         else:
             emparejamientos.append(ultimo)
 
-    return render_template("resultados.html", emparejamientos=emparejamientos)
+    # Guardar emparejamientos para encuesta de conformidad
+    with open("emparejamientos.json", "w") as f:
+        json.dump(emparejamientos, f)
 
+    return render_template("resultados.html", emparejamientos=emparejamientos, mostrar_encuesta=True)
+
+@app.route("/conformidad", methods=["GET", "POST"])
+def conformidad():
+    # Cargar emparejamientos
+    if not os.path.exists("emparejamientos.json"):
+        flash("No hay emparejamientos generados aún.")
+        return redirect(url_for("home"))
+    with open("emparejamientos.json") as f:
+        emparejamientos = json.load(f)
+    # Obtener lista de alumnos
+    alumnos_set = set()
+    for grupo in emparejamientos:
+        for persona in grupo:
+            alumnos_set.add(persona)
+    alumnos = sorted(list(alumnos_set))
+    if request.method == "POST":
+        nombre = request.form.get("nombre")
+        companero = request.form.get("companero")
+        puntaje = request.form.get("puntaje")
+        metodo = request.form.get("metodo", "afinidad")
+        if not (nombre and companero and puntaje):
+            flash("Por favor completá todos los campos.")
+            return render_template("conformidad.html", alumnos=alumnos, emparejamientos=emparejamientos)
+        # Guardar en base de datos
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS conformidad (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                alumno TEXT,
+                companero TEXT,
+                puntaje INTEGER,
+                metodo TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        c.execute("INSERT INTO conformidad (alumno, companero, puntaje, metodo) VALUES (?, ?, ?, ?)",
+                  (nombre, companero, puntaje, metodo))
+        conn.commit()
+        conn.close()
+        flash("¡Gracias por tu respuesta!")
+        return redirect(url_for("resultados"))
+    return render_template("conformidad.html", alumnos=alumnos, emparejamientos=emparejamientos)
 if __name__ == "__main__":
     app.run(debug=True)

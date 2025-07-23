@@ -12,5 +12,12 @@
             <li>🔸 {{ grupo|join(' + ') }}</li>
         {% endfor %}
     </ul>
+    {% if mostrar_encuesta %}
+    <div style="text-align:center; margin-top:30px;">
+        <form action="/conformidad" method="get" style="display:inline;">
+            <button type="submit" style="font-size:1.1em; padding:8px 22px; background:#2196f3; color:white; border:none; border-radius:5px; cursor:pointer;">Encuesta de conformidad</button>
+        </form>
+    </div>
+    {% endif %}
 </body>
 </html>
