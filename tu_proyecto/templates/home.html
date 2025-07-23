@@ -65,15 +65,15 @@
             <tr>
                 <td colspan="3" style="color: green; font-weight: bold; text-align: center;">¡Todos los alumnos ya votaron!</td>
             </tr>
-            <tr>
-                <td colspan="3" style="text-align: center;">
-                    <form action="/resultados" method="get" style="display:inline;">
-                        <button type="submit">Ver resultados</button>
-                    </form>
-                </td>
-            </tr>
         {% endif %}
     </table>
+    {% if restantes == 0 %}
+    <div style="text-align:center; margin-bottom:20px;">
+        <form action="/resultados" method="get" style="display:inline;">
+            <button type="submit" style="font-size:1.1em; padding:8px 22px; background:#4caf50; color:white; border:none; border-radius:5px; cursor:pointer;">Ver resultados</button>
+        </form>
+    </div>
+    {% endif %}
     {% endif %}
     <form method="post" action="/reset" style="display:inline;">
         <button type="submit">Resetear votos</button>
