@@ -6,22 +6,75 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <h1>Seleccioná tu nombre</h1>
-    <ul>
+    <div style="display: flex; align-items: center; margin-bottom: 20px;">
+        <img src="/static/logo.png" alt="Logo Instituto Puertas del Sol" style="height: 70px; margin-right: 20px;">
+        <h1 style="margin: 0; font-size: 2.2em;">Instituto Puertas del Sol</h1>
+    </div>
+    <section style="background: #f9f9f9; border-radius: 8px; padding: 18px 22px 10px 22px; margin-bottom: 28px; border: 1px solid #e0e0e0;">
+        <h2 style="margin-top:0; font-size:1.3em; color:#333;">App de Emparejamiento de Alumnos</h2>
+        <p>Esta aplicación permite organizar grupos de alumnos según sus preferencias y notas, ideal para docentes y equipos psicopedagógicos.</p>
+        <strong>Metodología:</strong>
+        <ul>
+            <li>Cada alumno puntúa a 5 compañeros y puede bloquear a uno.</li>
+            <li>La votación es anónima y validada para evitar sesgos.</li>
+            <li>El sistema empareja automáticamente en grupos de 2 o 3, priorizando afinidad y evitando bloqueos.</li>
+            <li>Se pueden importar listas y notas desde PDF, y exportar estadísticas a Excel.</li>
+        </ul>
+        <strong>¿Cómo funciona la combinación entre aleatoriedad y elección?</strong>
+        <p>
+            El sistema utiliza una combinación de preferencias individuales (las puntuaciones que cada alumno asigna a sus compañeros) y un algoritmo matemático para formar los grupos. Cada alumno debe asignar un puntaje único del 1 al 5 a cinco compañeros distintos, lo que obliga a priorizar y distribuir sus preferencias. Además, puede bloquear a un compañero si lo desea.
+        </p>
+        <p>
+            <b>Matemática detrás del emparejamiento:</b> El algoritmo busca pares de alumnos con la mayor afinidad mutua, es decir, aquellos que se han puntuado alto entre sí. Se priorizan los pares con mayor "nivel mutuo" (el mínimo de los dos puntajes cruzados). Si no hay afinidad mutua suficiente, el sistema recurre a la aleatoriedad para completar los grupos, asegurando que nadie quede solo y que los bloqueos sean respetados. Así, se logra un equilibrio entre la voz de los alumnos y la equidad aleatoria.
+        </p>
+        <p style="color:#b00; font-weight:bold;">Versión beta: esta plataforma está en desarrollo y sujeta a cambios y mejoras continuas.</p>
+    </section>
+    <form method="get" id="form-anio" style="margin-bottom: 20px;">
+        <label for="anio">Seleccioná el año:</label>
+        <select name="anio" id="anio" onchange="this.form.submit()">
+            <option value="">-- Elegí un año --</option>
+            <option value="sexto" {% if anio == 'sexto' %}selected{% endif %}>Sexto año</option>
+            <!-- Aquí luego se agregan más años -->
+        </select>
+    </form>
+    {% if anio == 'sexto' %}
+    <h2>Seleccioná tu nombre</h2>
+    <p>Total de alumnos: {{ alumnos|length }}</p>
+    <table border="1" cellpadding="6" style="border-collapse: collapse; margin-bottom: 20px;">
+        <tr style="background: #f0f0f0;">
+            <th>#</th>
+            <th>Nombre</th>
+            <th>Votar</th>
+        </tr>
         {% set restantes = alumnos|length - ya_votaron|length %}
         {% if restantes > 0 %}
             {% for alumno in alumnos %}
-                {% if alumno not in ya_votaron %}
-                    <li><a href="{{ url_for('votar', nombre=alumno) }}">{{ alumno }}</a></li>
-                {% endif %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ alumno }}</td>
+                    <td>
+                        {% if alumno not in ya_votaron %}
+                            <a href="{{ url_for('votar', nombre=alumno) }}">Votar</a>
+                        {% else %}
+                            <span style="color: gray;">Ya votó</span>
+                        {% endif %}
+                    </td>
+                </tr>
             {% endfor %}
         {% else %}
-            <li style="color: green; font-weight: bold;">¡Todos los alumnos ya votaron!</li>
-            <form action="/resultados" method="get">
-                <button type="submit">Ver resultados</button>
-            </form>
+            <tr>
+                <td colspan="3" style="color: green; font-weight: bold; text-align: center;">¡Todos los alumnos ya votaron!</td>
+            </tr>
+            <tr>
+                <td colspan="3" style="text-align: center;">
+                    <form action="/resultados" method="get" style="display:inline;">
+                        <button type="submit">Ver resultados</button>
+                    </form>
+                </td>
+            </tr>
         {% endif %}
-    </ul>
+    </table>
+    {% endif %}
     <form method="post" action="/reset" style="display:inline;">
         <button type="submit">Resetear votos</button>
     </form>

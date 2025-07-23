@@ -11,6 +11,51 @@ app = Flask(__name__)
 app.secret_key = 'notas_secret_key'
 # Guardamos votos
 notas = {}
+
+# Diccionario de alumnos por año
+alumnos_por_anio = {
+    'sexto': [
+        "GUADALUPE IMAR",
+        "JUAN CRUZ ANTONELLO VEGA",
+        "SANTINO ARNOLETTO FERRERO",
+        "ANA PAULA BALDONCINI",
+        "LOLA DE LOURDES BLANGINO",
+        "VICTORIA LUZ BORTOLINI",
+        "BAUTISTA BROMBIN BENEDETTI",
+        "FERNANDO CACERES",
+        "IGNACIO DANIEL CAMPANA",
+        "DELFINA DAFNE CARBAJAL",
+        "ALMA CAROLINI",
+        "CHIARA COMBA GALVAGNO",
+        "LOURDES CRISTALLI",
+        "RAMIRO CRISTALLI",
+        "SEBASTIAN DAVICO FLAUMER",
+        "CHIARA MARIA AYELEN DUARTE CUEVA",
+        "JUAN CRUZ FANTONI",
+        "LUCÍA MARÍA FRARESSO",
+        "VICTORIA FRARESSO",
+        "LORENZO MALIZIA MACAGNO",
+        "AZUL MORENA MATTIA",
+        "EMILIA MURATURE",
+        "JUANITA MUÑOZ VERDICCHIO",
+        "LUCIA SCHERMA MARCHEGIANI",
+        "CATALINA VICENTE SORIA",
+        "SANTIAGO VILLARREAL",
+        "MAGALI WALKER",
+        "MARTINA BELÉN ZORRILLA",
+        "LOURDES PAULINA ZUPPA"
+    ]
+    # Aquí luego se agregan más años
+}
+
+# Asignaciones por año
+asignaciones_por_anio = {}
+for anio, alumnos in alumnos_por_anio.items():
+    random.seed(42)
+    asignaciones_por_anio[anio] = {
+        alumno: random.sample([a for a in alumnos if a != alumno], min(5, len(alumnos)-1))
+        for alumno in alumnos
+    }
 # Ruta para subir PDF de notas
 @app.route("/subir_notas", methods=["POST"])
 def subir_notas():
@@ -94,7 +139,7 @@ init_db()
 
 # Lista de alumnos
 alumnos = [
-    "GUADALUPE IMAR", "JUAN CRUZ ANTONELLO VEGA", "SANTINO ARNOLETTO FERRERO",
+    "GUADALUPE AIMAR", "JUAN CRUZ ANTONELLO VEGA", "SANTINO ARNOLETTO FERRERO",
     "ANA PAULA BALDONCINI", "LOLA DE LOURDES BLANGINO", "VICTORIA LUZ BORTOLINI",
     "BAUTISTA BROMBIN BENEDETTI", "FERNANDO CACERES", "IGNACIO DANIEL CAMPANA",
     "DELFINA DAFNE CARBAJAL", "ALMA CAROLINI", "CHIARA COMBA GALVAGNO",
@@ -118,12 +163,20 @@ if not os.path.exists("votos.json"):
     with open("votos.json", "w") as f:
         json.dump({}, f)
 
+
 @app.route("/")
 def home():
-    with open("votos.json") as f:
-        votos = json.load(f)
+    anio = request.args.get('anio', '')
+    alumnos = alumnos_por_anio.get(anio, [])
+    asignaciones = asignaciones_por_anio.get(anio, {})
+    # Cargar votos solo de ese año (puedes mejorar esto si quieres separar por año en el futuro)
+    if os.path.exists("votos.json"):
+        with open("votos.json") as f:
+            votos = json.load(f)
+    else:
+        votos = {}
     ya_votaron = set(votos.keys())
-    return render_template("home.html", alumnos=alumnos, ya_votaron=ya_votaron)
+    return render_template("home.html", alumnos=alumnos, ya_votaron=ya_votaron, anio=anio)
 
 # Ruta para resetear votos
 @app.route("/reset", methods=["POST"])
@@ -144,8 +197,12 @@ def aleatorio():
 
 
 
+
 @app.route("/votar/<nombre>", methods=["GET", "POST"])
 def votar(nombre):
+    anio = request.args.get('anio', 'sexto')  # Por ahora solo sexto, pero preparado para más
+    asignaciones = asignaciones_por_anio.get(anio, {})
+    alumnos = alumnos_por_anio.get(anio, [])
     with open("votos.json") as f:
         votos = json.load(f)
 
@@ -158,7 +215,7 @@ def votar(nombre):
         valores = list(calificaciones.values())
         if sorted(valores) != [1, 2, 3, 4, 5]:
             error = "Debes asignar cada puntaje del 1 al 5 una sola vez entre tus compañeros."
-            return render_template("votar.html", nombre=nombre, opciones=asignaciones[nombre], alumnos=alumnos, error=error)
+            return render_template("votar.html", nombre=nombre, opciones=asignaciones[nombre], alumnos=alumnos, error=error, anio=anio)
         votos[nombre] = calificaciones
         with open("votos.json", "w") as f:
             json.dump(votos, f)
@@ -170,9 +227,10 @@ def votar(nombre):
                       (nombre, companero, punt, 1 if companero == bloqueo else 0, datetime.now()))
         conn.commit()
         conn.close()
-        return redirect(url_for("gracias", nombre=nombre))
+        # Redirigir a la lista del año correspondiente
+        return redirect(url_for("home", anio=anio))
 
-    return render_template("votar.html", nombre=nombre, opciones=asignaciones[nombre], alumnos=alumnos)
+    return render_template("votar.html", nombre=nombre, opciones=asignaciones[nombre], alumnos=alumnos, anio=anio)
 
 # Página de agradecimiento
 @app.route("/gracias/<nombre>")
