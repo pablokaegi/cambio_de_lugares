@@ -46,7 +46,81 @@ def guardar_json_seguro(archivo, datos):
     except Exception as e:
         print(f"Error guardando {archivo}: {e}")
         return False
+# Agregar después de las funciones helper existentes:
 
+def calcular_puntos_gamificacion(voto_data):
+    """Calcula puntos gamificados basados en la calidad del voto"""
+    puntos = 0
+    ratings = voto_data.get('ratings', {})
+    
+    # Puntos base por votar
+    puntos += 10
+    
+    # Puntos por diversidad en las calificaciones
+    if ratings:
+        valores_unicos = len(set(ratings.values()))
+        puntos += valores_unicos * 2  # 2 puntos por cada valor diferente usado
+        
+        # Bonus por usar el rango completo (1-5)
+        if len(set(ratings.values())) >= 4:
+            puntos += 5
+    
+    # Puntos por participación temprana
+    from datetime import datetime
+    fecha_voto = datetime.fromisoformat(voto_data.get('fecha', datetime.now().isoformat()))
+    hora_voto = fecha_voto.hour
+    
+    if 8 <= hora_voto <= 12:  # Mañana
+        puntos += 3
+    elif 13 <= hora_voto <= 17:  # Tarde
+        puntos += 2
+    
+    return puntos
+
+def actualizar_ranking_clase(anio, alumno, puntos):
+    """Actualiza el ranking gamificado de la clase"""
+    ranking_archivo = f"ranking_{anio}.json"
+    ranking = cargar_json_seguro(ranking_archivo)
+    
+    if alumno not in ranking:
+        ranking[alumno] = {
+            'puntos_totales': 0,
+            'nivel': 1,
+            'badges': [],
+            'fecha_ultimo_voto': None
+        }
+    
+    # Actualizar puntos
+    ranking[alumno]['puntos_totales'] += puntos
+    ranking[alumno]['fecha_ultimo_voto'] = datetime.now().isoformat()
+    
+    # Calcular nivel basado en puntos
+    puntos_totales = ranking[alumno]['puntos_totales']
+    nuevo_nivel = min(10, (puntos_totales // 50) + 1)  # Nivel cada 50 puntos, máximo 10
+    
+    if nuevo_nivel > ranking[alumno]['nivel']:
+        ranking[alumno]['nivel'] = nuevo_nivel
+        # Otorgar badge por subir nivel
+        ranking[alumno]['badges'].append(f"Nivel {nuevo_nivel}")
+    
+    # Guardar ranking
+    guardar_json_seguro(ranking_archivo, ranking)
+    
+    return ranking[alumno]
+
+def otorgar_badges(alumno_stats, votos_anio):
+    """Otorga badges especiales basados en comportamiento"""
+    badges_nuevos = []
+    
+    # Badge "Votante Temprano" - primeros 5 en votar
+    if len(votos_anio) <= 5:
+        badges_nuevos.append("🥇 Votante Temprano")
+    
+    # Badge "Evaluador Justo" - uso equilibrado de puntuaciones
+    # Badge "Líder Social" - puntuaciones altas recibidas
+    # etc.
+    
+    return badges_nuevos
 # 3. TERCERO: AHORA SÍ cargar usuarios adicionales
 usuarios_archivo = cargar_json_seguro('usuarios.json')
 if usuarios_archivo:
@@ -298,11 +372,11 @@ def votar(anio, nombre):
     
     # POST - procesar votación
     alumnos_a_evaluar = session.get(f'alumnos_evaluar_{anio}_{nombre}', [])
-    
+
     if not alumnos_a_evaluar:
         flash('Error en la sesión. Intenta nuevamente.', 'error')
         return redirect(url_for('votar', anio=anio, nombre=nombre))
-    
+
     # Recoger ratings
     ratings = {}
     for alumno in alumnos_a_evaluar:
@@ -318,25 +392,24 @@ def votar(anio, nombre):
             except ValueError:
                 flash(f'Rating no válido para {alumno}', 'error')
                 return redirect(url_for('votar', anio=anio, nombre=nombre))
-    
+
     # Validaciones
     if len(ratings) != len(alumnos_a_evaluar):
         flash('Debes evaluar a todos los compañeros asignados', 'error')
         return redirect(url_for('votar', anio=anio, nombre=nombre))
-    
+
     # Verificar que no todos tengan rating 1
     if all(rating == 1 for rating in ratings.values()):
         flash('No puedes calificar a todos con la puntuación mínima', 'error')
         return redirect(url_for('votar', anio=anio, nombre=nombre))
-    
+
     # Procesar bloqueo (opcional)
     bloqueado = None
     if 'bloqueado' in request.form:
         bloqueados = request.form.getlist('bloqueado')
         if bloqueados:
-            # Tomar solo el primer bloqueado (debería ser solo uno por el JavaScript)
             bloqueado = bloqueados[0] if bloqueados[0] in alumnos_a_evaluar else None
-    
+
     # Guardar votación
     from datetime import datetime
     voto_data = {
@@ -346,15 +419,29 @@ def votar(anio, nombre):
         'fecha': datetime.now().isoformat(),
         'ip': request.remote_addr
     }
-    
+
+    # ✅ GAMIFICACIÓN: Calcular puntos
+    puntos_obtenidos = calcular_puntos_gamificacion(voto_data)
+    voto_data['puntos_obtenidos'] = puntos_obtenidos
+
     # Guardar en el archivo de votos
+    votos = cargar_json_seguro(archivo_votos)
     votos[nombre] = voto_data
     guardar_json_seguro(archivo_votos, votos)
-    
+
+    # ✅ GAMIFICACIÓN: Actualizar ranking y badges
+    alumno_stats = actualizar_ranking_clase(anio, nombre, puntos_obtenidos)
+    badges_nuevos = otorgar_badges(alumno_stats, votos)
+
     # Limpiar la sesión
     session.pop(f'alumnos_evaluar_{anio}_{nombre}', None)
-    
-    flash('¡Votación registrada exitosamente!', 'success')
+
+    # ✅ GAMIFICACIÓN: Flash message con puntos
+    flash(f'¡Votación registrada! 🎉 Ganaste {puntos_obtenidos} puntos. Nivel actual: {alumno_stats["nivel"]}', 'success')
+
+    if badges_nuevos:
+        flash(f'¡Nuevos badges obtenidos: {", ".join(badges_nuevos)}! 🏆', 'info')
+
     return redirect(url_for('home', anio=anio))
 
 @app.route("/procesar_voto", methods=["POST"])
@@ -572,7 +659,7 @@ def asignacion_bancos():
     
     for fila in range(filas):
         for col in range(cols):
-            banco_numero = fila * cols + col + 1
+            banco_numero = fila * cols + col + 1;
             
             if banco_index < len(pares_para_bancos):
                 par = pares_para_bancos[banco_index]
@@ -887,7 +974,7 @@ def estadisticas(anio):
         'bloqueos_mutuos': bloqueos_mutuos,
         'mejores_afinidades': mejores_afinidades[:10],
         'participacion': round((total_votantes / len(alumnos_por_anio[anio])) * 100, 1) if anio in alumnos_por_anio else 0
-    }
+    };
     
     return render_template("estadisticas.html", **estadisticas_data)
 # Agrega esta ruta antes del if __name__ == "__main__":
@@ -901,12 +988,6 @@ def reset_votos():
     if not anio or anio not in alumnos_por_anio:
         flash("Año no válido", "error")
         return redirect(url_for('home'))
-    
-    # Confirmación de seguridad
-    confirmacion = request.form.get('confirmacion', '')
-    if confirmacion != 'RESET':
-        flash("Debes escribir 'RESET' para confirmar el borrado", "error")
-        return redirect(url_for('home', anio=anio))
     
     try:
         # Archivo de votos
@@ -932,14 +1013,23 @@ def reset_votos():
         # También resetear bancos si existen
         bancos_archivo = f"bancos_{anio}.json"
         if os.path.exists(bancos_archivo):
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_bancos = f"backup_bancos_{anio}_{timestamp}.json"
             shutil.copy2(bancos_archivo, backup_bancos)
             os.remove(bancos_archivo)
             flash(f"También se resetearon las asignaciones de bancos", "info")
+        
+        # ✅ NUEVO: También resetear ranking gamificado
+        ranking_archivo = f"ranking_{anio}.json"
+        if os.path.exists(ranking_archivo):
+            backup_ranking = f"backup_ranking_{anio}_{timestamp}.json"
+            shutil.copy2(ranking_archivo, backup_ranking)
+            os.remove(ranking_archivo)
+            flash(f"También se reseteo el ranking gamificado", "info")
             
     except Exception as e:
         print(f"Error en reset_votos: {e}")
-        flash("Error al resetear los votos", "error")
+        flash(f"Error al resetear los votos: {str(e)}", "error")
     
     return redirect(url_for('home', anio=anio))
 
@@ -1093,9 +1183,42 @@ def eliminar_usuario(usuario):
         flash("Usuario no encontrado", "error")
     
     return redirect(url_for('gestionar_usuarios'))
-# Tu if __name__ == "__main__": va aquí
-if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0', port=5000)
+
+@app.route("/ranking/<anio>")
+@login_required
+def ranking(anio):
+    """Muestra el ranking gamificado de la clase"""
+    if anio not in alumnos_por_anio:
+        flash("Año no válido", "error")
+        return redirect(url_for('home'))
+    
+    ranking_archivo = f"ranking_{anio}.json"
+    ranking_data = cargar_json_seguro(ranking_archivo)
+    
+    if not ranking_data:
+        flash("Aún no hay datos de ranking para este año", "info")
+        return redirect(url_for('home', anio=anio))
+    
+    # Ordenar por puntos (descendente)
+    ranking_ordenado = sorted(
+        ranking_data.items(),
+        key=lambda x: x[1]['puntos_totales'],
+        reverse=True
+    )
+    
+    # Calcular estadísticas
+    total_participantes = len(ranking_data)
+    puntos_promedio = sum(stats['puntos_totales'] for stats in ranking_data.values()) / total_participantes if total_participantes > 0 else 0
+    nivel_promedio = sum(stats['nivel'] for stats in ranking_data.values()) / total_participantes if total_participantes > 0 else 0
+    total_badges = sum(len(stats['badges']) for stats in ranking_data.values())
+    
+    return render_template("ranking.html",
+                         anio=anio,
+                         ranking_ordenado=ranking_ordenado,
+                         total_participantes=total_participantes,
+                         puntos_promedio=puntos_promedio,
+                         nivel_promedio=nivel_promedio,
+                         total_badges=total_badges)
 
 def generar_emparejamientos(votos, lista_alumnos):
     """
@@ -1307,3 +1430,5 @@ def obtener_estadisticas_emparejamiento(emparejamientos, votos):
         'porcentaje_grupos_exitosos': (grupos_con_afinidad / total_grupos * 100) if total_grupos > 0 else 0,
         'afinidad_promedio_general': (afinidad_promedio_total / contador_afinidades) if contador_afinidades > 0 else 0
     }
+if __name__ == "__main__":
+    app.run(debug=True)
