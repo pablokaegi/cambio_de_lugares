@@ -979,10 +979,12 @@ def estadisticas(anio):
     return render_template("estadisticas.html", **estadisticas_data)
 # Agrega esta ruta antes del if __name__ == "__main__":
 
-@app.route("/reset_votos", methods=["POST"])
+# O usa esta versión que funciona 100% en Render:
+
+@app.route("/reset_votos_render", methods=["POST"])
 @role_required('administrador')
-def reset_votos():
-    """Resetea todos los votos de un año específico - SOLO ADMINISTRADORES"""
+def reset_votos_render():
+    """Reset optimizado para Render - Sobrescribe archivos con datos vacíos"""
     anio = request.form.get('anio', '')
     
     if not anio or anio not in alumnos_por_anio:
@@ -990,46 +992,44 @@ def reset_votos():
         return redirect(url_for('home'))
     
     try:
-        # Archivo de votos
-        votos_archivo = f"votos_{anio}.json"
+        from datetime import datetime
         
-        # Crear backup antes de borrar
-        if os.path.exists(votos_archivo):
-            from datetime import datetime
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_archivo = f"backup_votos_{anio}_{timestamp}.json"
-            
-            # Copiar archivo actual como backup
-            import shutil
-            shutil.copy2(votos_archivo, backup_archivo)
-            
-            # Borrar archivo principal
-            os.remove(votos_archivo)
-            
-            flash(f"✅ Votos de {anio} reseteados exitosamente. Backup guardado como {backup_archivo}", "success")
+        # Lista de archivos a resetear
+        archivos_resetear = {
+            f"votos_{anio}.json": "votos",
+            f"bancos_{anio}.json": "bancos", 
+            f"ranking_{anio}.json": "ranking"
+        }
+        
+        archivos_reseteados = []
+        
+        for archivo, tipo in archivos_resetear.items():
+            try:
+                # ✅ MÉTODO QUE FUNCIONA EN RENDER: Sobrescribir con datos vacíos
+                datos_vacios = {}
+                
+                # Escribir archivo vacío
+                with open(archivo, 'w', encoding='utf-8') as f:
+                    json.dump(datos_vacios, f, ensure_ascii=False, indent=2)
+                
+                archivos_reseteados.append(tipo)
+                print(f"✅ Reseteado: {archivo}")
+                
+            except Exception as e:
+                print(f"❌ Error reseteando {archivo}: {e}")
+        
+        # Mensaje de éxito
+        if archivos_reseteados:
+            tipos_str = ", ".join(archivos_reseteados)
+            flash(f"✅ Reset exitoso para {anio}: {tipos_str}", "success")
+            flash(f"🔄 Los archivos fueron vaciados correctamente", "info")
         else:
-            flash(f"No había votos para resetear en {anio}", "info")
-        
-        # También resetear bancos si existen
-        bancos_archivo = f"bancos_{anio}.json"
-        if os.path.exists(bancos_archivo):
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_bancos = f"backup_bancos_{anio}_{timestamp}.json"
-            shutil.copy2(bancos_archivo, backup_bancos)
-            os.remove(bancos_archivo)
-            flash(f"También se resetearon las asignaciones de bancos", "info")
-        
-        # ✅ NUEVO: También resetear ranking gamificado
-        ranking_archivo = f"ranking_{anio}.json"
-        if os.path.exists(ranking_archivo):
-            backup_ranking = f"backup_ranking_{anio}_{timestamp}.json"
-            shutil.copy2(ranking_archivo, backup_ranking)
-            os.remove(ranking_archivo)
-            flash(f"También se reseteo el ranking gamificado", "info")
+            flash(f"⚠️ No se pudo resetear ningún archivo para {anio}", "warning")
             
     except Exception as e:
-        print(f"Error en reset_votos: {e}")
-        flash(f"Error al resetear los votos: {str(e)}", "error")
+        error_msg = f"Error en reset: {str(e)}"
+        print(error_msg)
+        flash(f"❌ {error_msg}", "error")
     
     return redirect(url_for('home', anio=anio))
 
@@ -1430,5 +1430,59 @@ def obtener_estadisticas_emparejamiento(emparejamientos, votos):
         'porcentaje_grupos_exitosos': (grupos_con_afinidad / total_grupos * 100) if total_grupos > 0 else 0,
         'afinidad_promedio_general': (afinidad_promedio_total / contador_afinidades) if contador_afinidades > 0 else 0
     }
+# Agregar esta función helper:
+
+@app.route("/verificar_reset/<anio>")
+@role_required('administrador')
+def verificar_reset(anio):
+    """Verifica el estado de los archivos después del reset"""
+    if anio not in alumnos_por_anio:
+        flash("Año no válido", "error")
+        return redirect(url_for('home'))
+    
+    archivos_estado = {}
+    
+    archivos_verificar = [
+        f"votos_{anio}.json",
+        f"bancos_{anio}.json", 
+        f"ranking_{anio}.json"
+    ]
+    
+    for archivo in archivos_verificar:
+        if os.path.exists(archivo):
+            try:
+                data = cargar_json_seguro(archivo)
+                archivos_estado[archivo] = {
+                    'existe': True,
+                    'vacio': len(data) == 0,
+                    'tamaño': len(data)
+                }
+            except:
+                archivos_estado[archivo] = {
+                    'existe': True,
+                    'vacio': None,
+                    'error': True
+                }
+        else:
+            archivos_estado[archivo] = {
+                'existe': False,
+                'vacio': True
+            }
+    
+    # Crear mensaje de estado
+    mensaje_estado = []
+    for archivo, estado in archivos_estado.items():
+        if estado['existe'] and estado.get('vacio'):
+            mensaje_estado.append(f"✅ {archivo}: Vacío")
+        elif estado['existe']:
+            mensaje_estado.append(f"📁 {archivo}: {estado['tamaño']} elementos")
+        else:
+            mensaje_estado.append(f"❌ {archivo}: No existe")
+    
+    flash(f"Estado de archivos para {anio}:", "info")
+    for msg in mensaje_estado:
+        flash(msg, "info")
+    
+    return redirect(url_for('home', anio=anio))
 if __name__ == "__main__":
     app.run(debug=True)

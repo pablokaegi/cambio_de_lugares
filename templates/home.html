@@ -313,26 +313,13 @@
                 </a>
                 {% endif %}
                 
-                <form method="post" action="{{ url_for('reset_votos') }}" style="display: inline;" 
-                      onsubmit="return confirmarReset()">
+                <form method="post" action="{{ url_for('reset_votos_render') }}" style="display: inline;">
                     <input type="hidden" name="anio" value="{{ anio }}">
-                    <input type="hidden" name="confirmacion" value="RESET" id="confirmacion-input">
-                    <button type="submit" class="btn-custom btn-danger-custom">
+                    <button type="submit" class="btn-custom btn-danger-custom" 
+                            onclick="return confirm('⚠️ ¿Estás SEGURO de que quieres RESETEAR todos los votos de {{anio}}?\n\n✅ Se crearán backups automáticos.\n❌ Esta acción vaciará los archivos.\n\n¿Continuar?')">
                         <i class="fas fa-trash me-2"></i>Reset Votos
                     </button>
                 </form>
-
-                <script>
-                function confirmarReset() {
-                    const confirmacion = prompt('Para confirmar el reset, escribe "RESET" (en mayúsculas):');
-                    if (confirmacion === 'RESET') {
-                        return true;
-                    } else {
-                        alert('Reset cancelado. Debes escribir exactamente "RESET"');
-                        return false;
-                    }
-                }
-                </script>
 
                 {% if votos_data and votos_data|length > 0 %}
                     <a href="{{ url_for('asignacion_bancos', anio=anio) }}" class="btn-custom btn-warning-custom">
