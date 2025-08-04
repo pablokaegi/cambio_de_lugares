@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Votación - Instituto Puertas del Sol</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c5aa0;
+            --secondary-color: #f8f9fa;
+            --accent-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            max-width: 1000px;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: var(--primary-color);
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        .logo-container {
+            background: white;
+            border-radius: 50%;
+            padding: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .logo-container img {
+            height: 60px;
+            width: 60px;
+            object-fit: contain;
+            border-radius: 50%;
+        }
+        
+        .header-text h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 300;
+        }
+        
+        .header .subtitle {
+            margin-top: 5px;
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+        
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 25px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .student-info {
+            background: var(--secondary-color);
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .student-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+        
+        .instructions {
+            background: white;
+            border-left: 4px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .instruction-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+        
+        .instruction-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .instruction-icon {
+            color: var(--primary-color);
+            margin-right: 10px;
+            margin-top: 2px;
+            font-size: 1rem;
+        }
+        
+        .rating-section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        
+        .rating-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .rating-cards {
+            padding: 20px;
+        }
+        
+        .rating-card {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .rating-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 5px 15px rgba(44, 90, 160, 0.1);
+        }
+        
+        .rating-card.has-selection {
+            border-color: var(--accent-color);
+            background: #f8fff8;
+        }
+        
+        .student-card-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .rating-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        .rating-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid #ddd;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .rating-btn:hover {
+            border-color: var(--primary-color);
+            transform: scale(1.1);
+            box-shadow: 0 4px 10px rgba(44, 90, 160, 0.2);
+        }
+        
+        .rating-btn.selected {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            transform: scale(1.1);
+        }
+        
+        .rating-btn.used {
+            background: #6c757d;
+            color: white;
+            border-color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .rating-btn.used:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .block-option {
+            text-align: center;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+        
+        .block-checkbox {
+            margin-right: 8px;
+        }
+        
+        .block-label {
+            font-size: 0.9rem;
+            color: #666;
+            cursor: pointer;
+        }
+        
+        .submit-section {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            background: var(--secondary-color);
+            border-radius: 10px;
+        }
+        
+        .btn-submit {
+            background: linear-gradient(45deg, var(--accent-color), #218838);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            color: white;
+            font-size: 1.1rem;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(40, 167, 69, 0.3);
+            color: white;
+        }
+        
+        .btn-submit:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-cancel {
+            background: #6c757d;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            color: white;
+            text-decoration: none;
+            margin-left: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-cancel:hover {
+            background: #5a6268;
+            color: white;
+            text-decoration: none;
+        }
+        
+        .progress-indicator {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 8px;
+            margin: 20px 0;
+        }
+        
+        .progress-bar-vote {
+            background: var(--accent-color);
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.6s ease;
+        }
+        
+        .alert-custom {
+            border-radius: 10px;
+            border: none;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <a href="/home?anio={{ anio }}" class="back-btn">
+                <i class="fas fa-arrow-left me-2"></i>Volver
+            </a>
+            
+            <div class="header-content">
+                <div class="logo-container">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo Instituto Puertas del Sol">
+                </div>
+                <div class="header-text">
+                    <h1>Instituto Puertas del Sol</h1>
+                    <div class="subtitle">Sistema de Votación - Evaluación de Compañeros</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- Mostrar mensajes flash -->
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-warning alert-custom alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>{{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <!-- Información del estudiante -->
+            <div class="student-info">
+                <div class="student-name">
+                    <i class="fas fa-user-graduate me-2"></i>{{ nombre }}
+                </div>
+                <p class="mb-0 text-muted">Evaluando compañeros de 
+                    {% if anio == 'primero' %}Primer Año
+                    {% elif anio == 'segundo' %}Segundo Año
+                    {% elif anio == 'tercero' %}Tercer Año
+                    {% elif anio == 'cuarto' %}Cuarto Año
+                    {% elif anio == 'quinto' %}Quinto Año
+                    {% elif anio == 'sexto' %}Sexto Año
+                    {% endif %}
+                </p>
+            </div>
+            
+            <!-- Instrucciones -->
+            <div class="instructions">
+                <h5 class="mb-3">
+                    <i class="fas fa-info-circle me-2 text-primary"></i>
+                    Instrucciones para la Votación
+                </h5>
+                <div class="instruction-item">
+                    <i class="fas fa-star instruction-icon"></i>
+                    <span><strong>Califica a cada compañero del 1 al 5</strong> según qué tanto te gustaría trabajar con él/ella (1 = menos preferido, 5 = más preferido)</span>
+                </div>
+                <div class="instruction-item">
+                    <i class="fas fa-exclamation-circle instruction-icon"></i>
+                    <span><strong>Cada puntaje debe ser único:</strong> No puedes asignar el mismo número a dos compañeros diferentes</span>
+                </div>
+                <div class="instruction-item">
+                    <i class="fas fa-ban instruction-icon"></i>
+                    <span><strong>Bloquear compañero (OPCIONAL):</strong> Si hay alguien con quien definitivamente NO quieres trabajar, puedes marcarlo. Esto es completamente opcional y confidencial</span>
+                </div>
+                <div class="instruction-item">
+                    <i class="fas fa-shield-alt instruction-icon"></i>
+                    <span><strong>Confidencialidad:</strong> Tus calificaciones son privadas y solo se usan para formar los mejores grupos de trabajo</span>
+                </div>
+            </div>
+            
+            <!-- Formulario de votación -->
+            <form method="post" action="/procesar_voto" id="voteForm">
+                <input type="hidden" name="nombre" value="{{ nombre }}">
+                <input type="hidden" name="anio" value="{{ anio }}">
+                
+                <div class="rating-section">
+                    <div class="rating-header">
+                        <h4 class="mb-0">
+                            <i class="fas fa-users me-2"></i>
+                            Evalúa a tus Compañeros
+                        </h4>
+                        <div class="progress-indicator">
+                            <div class="progress-bar-vote" id="progressBar" style="width: 0%"></div>
+                        </div>
+                        <small>Progreso: <span id="progressText">0</span> de {{ opciones|length }} completados</small>
+                    </div>
+                    
+                    <div class="rating-cards">
+                        {% for companero in opciones %}
+                        <div class="rating-card" id="card_{{ loop.index }}">
+                            <div class="student-card-name">
+                                <i class="fas fa-user me-2"></i>{{ companero }}
+                            </div>
+                            
+                            <div class="rating-buttons">
+                                {% for i in range(1, 6) %}
+                                <button type="button" class="rating-btn" data-student="{{ companero }}" data-rating="{{ i }}" title="Calificación {{ i }}">
+                                    {{ i }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="block-option">
+                                <label class="block-label">
+                                    <input type="checkbox" class="block-checkbox" name="bloqueo" value="{{ companero }}">
+                                    <i class="fas fa-ban me-1"></i>No quiero trabajar con esta persona (opcional)
+                                </label>
+                            </div>
+                            
+                            <input type="hidden" name="{{ companero }}" id="rating_{{ companero }}">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="submit-section">
+                    <button type="submit" class="btn-submit" id="submitBtn" disabled>
+                        <i class="fas fa-paper-plane me-2"></i>Enviar Evaluación
+                    </button>
+                    <a href="/home?anio={{ anio }}" class="btn-cancel">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </a>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-lock me-1"></i>
+                            Esta evaluación es confidencial y se guardará de forma segura
+                        </small>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ratingBtns = document.querySelectorAll('.rating-btn');
+            const submitBtn = document.getElementById('submitBtn');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const totalStudents = {{ opciones|length }};
+            const usedRatings = new Set();
+            const studentRatings = new Map();
+            
+            // Manejar checkbox de bloqueo (solo uno a la vez)
+            const blockCheckboxes = document.querySelectorAll('.block-checkbox');
+            blockCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        blockCheckboxes.forEach(other => {
+                            if (other !== this) other.checked = false;
+                        });
+                    }
+                });
+            });
+            
+            function updateProgress() {
+                const completed = studentRatings.size;
+                const percentage = (completed / totalStudents) * 100;
+                progressBar.style.width = percentage + '%';
+                progressText.textContent = completed;
+                
+                // Habilitar botón submit solo si todas las calificaciones están completas
+                submitBtn.disabled = completed < totalStudents;
+                
+                if (completed === totalStudents) {
+                    submitBtn.classList.add('btn-success');
+                    submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>¡Listo para Enviar!';
+                }
+            }
+            
+            function updateButtonStates() {
+                ratingBtns.forEach(btn => {
+                    const rating = btn.dataset.rating;
+                    const student = btn.dataset.student;
+                    const isSelected = btn.classList.contains('selected');
+                    
+                    if (usedRatings.has(rating) && !isSelected) {
+                        btn.classList.add('used');
+                        btn.disabled = true;
+                    } else if (!usedRatings.has(rating)) {
+                        btn.classList.remove('used');
+                        btn.disabled = false;
+                    }
+                });
+            }
+            
+            ratingBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const student = this.dataset.student;
+                    const rating = this.dataset.rating;
+                    
+                    // Remover selección previa del estudiante
+                    const prevSelected = document.querySelector(`[data-student="${student}"].selected`);
+                    if (prevSelected) {
+                        usedRatings.delete(prevSelected.dataset.rating);
+                        prevSelected.classList.remove('selected');
+                        studentRatings.delete(student);
+                        document.getElementById(`card_${Array.from(document.querySelectorAll('.rating-card')).findIndex(card => card.querySelector(`[data-student="${student}"]`)) + 1}`).classList.remove('has-selection');
+                    }
+                    
+                    // Si el rating ya está usado, mostrar error
+                    if (usedRatings.has(rating)) {
+                        alert('⚠️ Este puntaje ya está asignado a otro compañero. Elige un número diferente.');
+                        return;
+                    }
+                    
+                    // Agregar nueva selección
+                    this.classList.add('selected');
+                    usedRatings.add(rating);
+                    studentRatings.set(student, rating);
+                    document.getElementById(`rating_${student}`).value = rating;
+                    
+                    // Marcar la tarjeta como completada
+                    const cardIndex = Array.from(document.querySelectorAll('.rating-card')).findIndex(card => card.querySelector(`[data-student="${student}"]`)) + 1;
+                    document.getElementById(`card_${cardIndex}`).classList.add('has-selection');
+                    
+                    updateButtonStates();
+                    updateProgress();
+                });
+            });
+            
+            // Validar formulario antes de enviar
+            document.getElementById('voteForm').addEventListener('submit', function(e) {
+                if (studentRatings.size < totalStudents) {
+                    e.preventDefault();
+                    alert('⚠️ Debes calificar a todos tus compañeros antes de enviar la evaluación.');
+                    return;
+                }
+                
+                const ratings = Array.from(studentRatings.values()).map(Number).sort();
+                const expectedRatings = [1, 2, 3, 4, 5].slice(0, totalStudents);
+                
+                if (JSON.stringify(ratings) !== JSON.stringify(expectedRatings)) {
+                    e.preventDefault();
+                    alert('⚠️ Debes usar cada puntaje exactamente una vez (del 1 al ' + totalStudents + ').');
+                    return;
+                }
+                
+                // Confirmar envío
+                if (!confirm('¿Estás seguro/a de enviar esta evaluación? Una vez enviada no podrás modificarla.')) {
+                    e.preventDefault();
+                    return;
+                }
+                
+                // Mostrar indicador de carga
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
+                submitBtn.disabled = true;
+            });
+            
+            // Inicializar
+            updateProgress();
+        });
+    </script>
+</body>
+</html>

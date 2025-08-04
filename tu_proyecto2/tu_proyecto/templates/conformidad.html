@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Encuesta de Conformidad</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Encuesta de Conformidad con el Emparejamiento</h1>
+    <p>Por favor, seleccioná tu nombre y el compañero/a que te tocó, y puntúa tu nivel de conformidad (1 = nada conforme, 5 = muy conforme).</p>
+    <form method="post">
+        <label for="nombre">Tu nombre:</label>
+        <select name="nombre" id="nombre" required>
+            <option value="">-- Elegí tu nombre --</option>
+            {% for alumno in alumnos %}
+                <option value="{{ alumno }}">{{ alumno }}</option>
+            {% endfor %}
+        </select>
+        <br><br>
+        <label for="companero">Compañero/a asignado:</label>
+        <select name="companero" id="companero" required>
+            <option value="">-- Elegí compañero/a --</option>
+            {% for grupo in emparejamientos %}
+                {% for persona in grupo %}
+                    <option value="{{ persona }}">{{ persona }}</option>
+                {% endfor %}
+            {% endfor %}
+        </select>
+        <br><br>
+        <label for="puntaje">Nivel de conformidad:</label>
+        <select name="puntaje" id="puntaje" required>
+            <option value="">-- Puntaje --</option>
+            {% for i in range(1,6) %}
+                <option value="{{ i }}">{{ i }}</option>
+            {% endfor %}
+        </select>
+        <br><br>
+        <input type="hidden" name="metodo" value="afinidad">
+        <button type="submit" style="background:#4caf50; color:white; font-size:1.1em; padding:8px 22px; border:none; border-radius:5px; cursor:pointer;">Guardar conformidad</button>
+    </form>
+</body>
+</html>
+</body>
+</html>
