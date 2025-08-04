@@ -3,436 +3,465 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asignación de Bancos - Instituto Puertas del Sol</title>
+    <title>Asignación de Bancos - {{anio.title()}}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root {
-            --primary-color: #2c5aa0;
-            --secondary-color: #f8f9fa;
-            --accent-color: #28a745;
-            --warning-color: #ffc107;
-            --danger-color: #dc3545;
-        }
-        
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         .main-container {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            margin: 20px auto;
-            max-width: 1200px;
-            overflow: hidden;
-        }
-        
-        .header {
-            background: var(--primary-color);
-            color: white;
-            padding: 20px 30px;
-            text-align: center;
-            position: relative;
-        }
-        
-        .header-content {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-        }
-        
-        .logo-container {
-            background: white;
-            border-radius: 50%;
-            padding: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-        
-        .logo-container img {
-            height: 60px;
-            width: 60px;
-            object-fit: contain;
-            border-radius: 50%;
-        }
-        
-        .header-text h1 {
-            margin: 0;
-            font-size: 1.8rem;
-            font-weight: 300;
-        }
-        
-        .header .subtitle {
-            margin-top: 5px;
-            opacity: 0.9;
-            font-size: 1rem;
-        }
-        
-        .back-btn {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(255,255,255,0.2);
-            border: 1px solid rgba(255,255,255,0.3);
-            color: white;
-            padding: 8px 15px;
-            border-radius: 25px;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-        
-        .back-btn:hover {
-            background: rgba(255,255,255,0.3);
-            color: white;
-            text-decoration: none;
-        }
-        
-        .content {
-            padding: 40px;
-        }
-        
-        .aula-info {
-            background: var(--secondary-color);
-            border-radius: 10px;
-            padding: 25px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-        
-        .year-badge {
-            display: inline-block;
-            background: var(--warning-color);
-            color: #212529;
-            padding: 5px 15px;
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
-            font-weight: 600;
-            margin-bottom: 10px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .aula-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 40px 20px;
+            margin: 20px 0;
+            border: 3px solid #dee2e6;
+            position: relative;
+            max-width: 800px;
+            margin: 20px auto;
+        }
+        
+        .aula-container::before {
+            content: '👨‍🏫 PIZARRÓN / FRENTE DEL AULA 👩‍🏫';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
             font-size: 0.9rem;
         }
         
-        .classroom-section {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        .banco {
+            width: 220px;  /* ✅ Más ancho para 2 alumnos */
+            height: 80px;   /* ✅ Más alto */
+            margin: 8px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
             overflow: hidden;
-            margin-bottom: 30px;
+            padding: 8px;
         }
         
-        .classroom-header {
-            background: var(--primary-color);
+        .banco.ocupado {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
-            padding: 20px;
-            text-align: center;
+            box-shadow: 0 6px 12px rgba(40, 167, 69, 0.3);
         }
         
-        .teacher-desk {
-            background: var(--accent-color);
-            color: white;
-            padding: 15px;
-            text-align: center;
-            margin: 20px auto 30px auto;
-            border-radius: 10px;
+        .banco.vacio {
+            background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
+            color: #6c757d;
+            border: 2px dashed #dee2e6;
+        }
+        
+        .banco:hover {
+            transform: scale(1.02);
+            z-index: 10;
+        }
+        
+        .banco.ocupado:hover {
+            box-shadow: 0 8px 20px rgba(40, 167, 69, 0.5);
+        }
+        
+        .alumno-en-banco {
+            font-size: 0.7rem;
+            line-height: 1.1;
+            margin: 1px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             max-width: 200px;
         }
         
-        /* AULA SIMPLIFICADA */
-        .classroom-grid {
-            padding: 30px;
-            background: #f8f9fa;
-        }
-        
-        .classroom-row {
+        .pasillo {
+            width: 40px;
             display: flex;
-            justify-content: center;
             align-items: center;
-            margin-bottom: 15px;
-            gap: 15px;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: #6c757d;
+            font-style: italic;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
         }
         
-        .row-number {
-            background: var(--primary-color);
+        .fila-numero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            width: 30px;
-            height: 30px;
+            width: 35px;
+            height: 35px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 0.9rem;
+            margin: 5px 10px;
         }
         
-        .desk-pair {
-            display: flex;
-            gap: 5px;
-        }
-        
-        .desk {
-            width: 120px;
-            height: 60px;
-            background: white;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .columna-label {
             text-align: center;
-            position: relative;
-            transition: all 0.3s ease;
-        }
-        
-        .desk.occupied {
-            background: white;
-            border-color: var(--primary-color);
-        }
-        
-        .desk.empty {
-            background: #f8f9fa;
-            border-color: #e9ecef;
-            opacity: 0.3;
-        }
-        
-        .student-name {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: #000000;  /* NEGRO para que se vea */
-            line-height: 1.1;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
             padding: 5px;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            text-align: center;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
         }
         
-        .pasillo {
-            width: 40px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: repeating-linear-gradient(
-                0deg,
-                #e9ecef 0px,
-                #e9ecef 2px,
-                transparent 2px,
-                transparent 6px
-            );
-            border-radius: 4px;
-        }
-        
-        .actions-section {
-            text-align: center;
-            margin-top: 30px;
+        .stats-panel {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
             padding: 20px;
-            background: var(--secondary-color);
-            border-radius: 10px;
+            margin-bottom: 20px;
         }
         
-        .btn-primary-custom {
-            background: linear-gradient(45deg, var(--primary-color), #3d6db8);
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .btn-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
-            padding: 12px 30px;
             border-radius: 25px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: all 0.3s ease;
+            padding: 12px 25px;
             color: white;
+            font-weight: 500;
+            transition: all 0.3s ease;
             text-decoration: none;
-            margin: 0 10px;
             display: inline-block;
+            margin: 5px;
         }
         
-        .btn-primary-custom:hover {
+        .btn-custom:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(44, 90, 160, 0.3);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
             color: white;
             text-decoration: none;
         }
         
         .btn-success-custom {
-            background: linear-gradient(45deg, var(--accent-color), #218838);
-            border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: all 0.3s ease;
-            color: white;
-            text-decoration: none;
-            margin: 0 10px;
-            display: inline-block;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
         }
         
-        .btn-success-custom:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(40, 167, 69, 0.3);
-            color: white;
-            text-decoration: none;
+        .btn-warning-custom {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        }
+        
+        .btn-danger-custom {
+            background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
+        }
+        
+        .leyenda {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .leyenda-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+        }
+        
+        .leyenda-color {
+            width: 30px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 10px;
         }
         
         @media (max-width: 768px) {
-            .desk {
-                width: 100px;
-                height: 50px;
-            }
-            
-            .student-name {
+            .banco {
+                width: 180px;
+                height: 65px;
                 font-size: 0.65rem;
             }
             
-            .classroom-row {
-                gap: 10px;
+            .aula-container {
+                padding: 20px 10px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="main-container">
-        <div class="header">
-            <a href="/resultados?anio={{ anio }}" class="back-btn">
-                <i class="fas fa-arrow-left me-2"></i>Volver
-            </a>
-            
-            <div class="header-content">
-                <div class="logo-container">
-                    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo Instituto Puertas del Sol">
-                </div>
-                <div class="header-text">
-                    <h1>Instituto Puertas del Sol</h1>
-                    <div class="subtitle">Asignación de Bancos en el Aula</div>
-                </div>
+    <div class="container-fluid">
+        <div class="main-container">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h1 class="page-title" style="color: #2c3e50; font-weight: 700;">
+                    <i class="fas fa-chair text-primary"></i>
+                    Asignación de Bancos - {{anio.title()}}
+                </h1>
             </div>
-        </div>
-        
-        <div class="content">
-            <!-- Información del aula -->
-            <div class="aula-info">
-                <div class="year-badge">
-                    {% if anio == 'primero' %}Primer Año
-                    {% elif anio == 'segundo' %}Segundo Año
-                    {% elif anio == 'tercero' %}Tercer Año
-                    {% elif anio == 'cuarto' %}Cuarto Año
-                    {% elif anio == 'quinto' %}Quinto Año
-                    {% elif anio == 'sexto' %}Sexto Año
-                    {% endif %}
-                </div>
-                <h3 class="mb-0">
-                    <i class="fas fa-chalkboard-teacher me-2 text-primary"></i>
-                    Distribución del Aula
-                </h3>
-            </div>
-            
-            <!-- Aula virtual -->
-            <div class="classroom-section">
-                <div class="classroom-header">
-                    <h4 class="mb-0">
-                        <i class="fas fa-school me-2"></i>
-                        Vista del Aula
-                    </h4>
-                </div>
-                
-                <!-- Escritorio del profesor -->
-                <div class="teacher-desk">
-                    <i class="fas fa-user-tie me-2"></i>
-                    <strong>Escritorio del Profesor</strong>
-                </div>
-                
-                <!-- Grid simplificado del aula - SOLO 2 PASILLOS -->
-                <div class="classroom-grid">
-                    {% for fila_num in range(filas) %}
-                    <div class="classroom-row">
-                        <div class="row-number">{{ fila_num + 1 }}</div>
-                        
-                        <!-- Par izquierdo (2 bancos) -->
-                        <div class="desk-pair">
-                            {% set banco1 = fila_num * 6 %}
-                            {% set banco2 = fila_num * 6 + 1 %}
-                            
-                            <div class="desk {% if banco1 < aula|length and aula[banco1].ocupado %}occupied{% else %}empty{% endif %}">
-                                {% if banco1 < aula|length and aula[banco1].ocupado %}
-                                    <div class="student-name">{{ aula[banco1].alumno }}</div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="desk {% if banco2 < aula|length and aula[banco2].ocupado %}occupied{% else %}empty{% endif %}">
-                                {% if banco2 < aula|length and aula[banco2].ocupado %}
-                                    <div class="student-name">{{ aula[banco2].alumno }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <!-- PASILLO 1 -->
-                        <div class="pasillo"></div>
-                        
-                        <!-- Par central (2 bancos) -->
-                        <div class="desk-pair">
-                            {% set banco3 = fila_num * 6 + 2 %}
-                            {% set banco4 = fila_num * 6 + 3 %}
-                            
-                            <div class="desk {% if banco3 < aula|length and aula[banco3].ocupado %}occupied{% else %}empty{% endif %}">
-                                {% if banco3 < aula|length and aula[banco3].ocupado %}
-                                    <div class="student-name">{{ aula[banco3].alumno }}</div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="desk {% if banco4 < aula|length and aula[banco4].ocupado %}occupied{% else %}empty{% endif %}">
-                                {% if banco4 < aula|length and aula[banco4].ocupado %}
-                                    <div class="student-name">{{ aula[banco4].alumno }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <!-- PASILLO 2 -->
-                        <div class="pasillo"></div>
-                        
-                        <!-- Par derecho (2 bancos) -->
-                        <div class="desk-pair">
-                            {% set banco5 = fila_num * 6 + 4 %}
-                            {% set banco6 = fila_num * 6 + 5 %}
-                            
-                            <div class="desk {% if banco5 < aula|length and aula[banco5].ocupado %}occupied{% else %}empty{% endif %}">
-                                {% if banco5 < aula|length and aula[banco5].ocupado %}
-                                    <div class="student-name">{{ aula[banco5].alumno }}</div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="desk {% if banco6 < aula|length and aula[banco6].ocupado %}occupied{% else %}empty{% endif %}">
-                                {% if banco6 < aula|length and aula[banco6].ocupado %}
-                                    <div class="student-name">{{ aula[banco6].alumno }}</div>
-                                {% endif %}
-                            </div>
+
+            <!-- Estadísticas -->
+            <div class="stats-panel">
+                <div class="row">
+                    <div class="col-3">
+                        <div class="stat-item">
+                            <div class="stat-number">{{total_alumnos}}</div>
+                            <div class="stat-label">Alumnos</div>
                         </div>
                     </div>
-                    {% endfor %}
+                    <div class="col-3">
+                        <div class="stat-item">
+                            <div class="stat-number">{{total_bancos}}</div>
+                            <div class="stat-label">Bancos</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="stat-item">
+                            <div class="stat-number">{{grupos|length}}</div>
+                            <div class="stat-label">Grupos</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="stat-item">
+                            <div class="stat-number">{{filas}}</div>
+                            <div class="stat-label">Filas</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <!-- Acciones -->
-            <div class="actions-section">
-                <h5 class="mb-3">
-                    <i class="fas fa-tools me-2"></i>
-                    Acciones Disponibles
-                </h5>
+
+            <!-- Aula -->
+            <div class="aula-container">
+                <!-- Etiquetas de columnas -->
+                <div class="d-flex justify-content-center mb-3">
+                    <div class="columna-label" style="width: 220px; margin: 0 8px;">
+                        📚 COLUMNA IZQUIERDA 📚
+                    </div>
+                    <div class="pasillo">PASILLO</div>
+                    <div class="columna-label" style="width: 220px; margin: 0 8px;">
+                        📝 COLUMNA CENTRO 📝
+                    </div>
+                    <div class="pasillo">PASILLO</div>
+                    <div class="columna-label" style="width: 220px; margin: 0 8px;">
+                        🎒 COLUMNA DERECHA 🎒
+                    </div>
+                </div>
                 
-                <a href="/resultados?anio={{ anio }}" class="btn-primary-custom">
-                    <i class="fas fa-users me-2"></i>Ver Grupos
+                <!-- Filas de bancos -->
+                {% for fila in range(filas) %}
+                <div class="d-flex justify-content-center align-items-center mb-2">
+                    <!-- Número de fila -->
+                    <div class="fila-numero">{{fila + 1}}</div>
+                    
+                    <!-- Bancos de la fila -->
+                    {% for col in range(cols) %}
+                        {% set banco_index = fila * cols + col %}
+                        {% if banco_index < aula|length %}
+                            {% set banco = aula[banco_index] %}
+                            <div class="banco {% if banco.ocupado %}ocupado{% else %}vacio{% endif %}" 
+                                 data-fila="{{banco.fila}}" 
+                                 data-columna="{{banco.columna}}"
+                                 data-posicion="{{banco.posicion}}"
+                                 title="{% if banco.ocupado %}Banco {{banco.numero}} - {{banco.posicion}} - Grupo {{banco.grupo}}{% else %}Banco vacío{% endif %}">
+                                
+                                {% if banco.ocupado %}
+                                    <!-- Mostrar alumnos en el banco -->
+                                    {% for alumno in banco.alumnos %}
+                                    <div class="alumno-en-banco">{{alumno[:20]}}</div>
+                                    {% endfor %}
+                                    
+                                    <!-- Badge del grupo -->
+                                    {% if banco.grupo > 0 %}
+                                        <div class="grupo-badge">G{{banco.grupo}}</div>
+                                    {% endif %}
+                                    
+                                    <!-- Indicador de cantidad -->
+                                    <small style="position: absolute; bottom: 2px; right: 5px; background: rgba(255,255,255,0.8); color: #333; border-radius: 10px; padding: 1px 4px; font-size: 0.6rem;">
+                                        {{banco.cantidad}} alum.
+                                    </small>
+                                {% else %}
+                                    <i class="fas fa-chair" style="font-size: 1.5rem; opacity: 0.5;"></i>
+                                    <small>Banco Vacío</small>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Pasillo después de la primera y segunda columna -->
+                        {% if col < cols - 1 %}
+                        <div class="pasillo">
+                            {% if col == 0 %}
+                            PASILLO<br>1
+                            {% else %}
+                            PASILLO<br>2
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Leyenda -->
+            <div class="leyenda">
+                <h6><i class="fas fa-info-circle"></i> Leyenda</h6>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="leyenda-item">
+                            <div class="leyenda-color" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);"></div>
+                            <span>Banco Ocupado</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="leyenda-item">
+                            <div class="leyenda-color" style="background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%); border: 2px dashed #dee2e6;"></div>
+                            <span>Banco Vacío</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="leyenda-item">
+                            <div class="leyenda-color" style="background: white; border: 1px solid #dee2e6; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold;">1</div>
+                            <span>Número de Grupo</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="text-center">
+                <a href="{{ url_for('home', anio=anio) }}" class="btn-custom">
+                    <i class="fas fa-arrow-left"></i> Volver al Home
                 </a>
                 
-                <a href="/asignacion_bancos?anio={{ anio }}&regenerar=true" class="btn-success-custom">
-                    <i class="fas fa-sync-alt me-2"></i>Reorganizar
-                </a>
-                
-                <button onclick="window.print()" class="btn-primary-custom">
-                    <i class="fas fa-print me-2"></i>Imprimir
+                <button onclick="regenerarAsignacion()" class="btn-custom btn-warning-custom">
+                    <i class="fas fa-refresh"></i> Regenerar
                 </button>
+                
+                {% if guardado_disponible %}
+                <a href="{{ url_for('cargar_bancos', anio=anio) }}" class="btn-custom btn-success-custom">
+                    <i class="fas fa-download"></i> Cargar Guardado
+                </a>
+                {% endif %}
+                
+                <button onclick="guardarAsignacion()" class="btn-custom btn-success-custom">
+                    <i class="fas fa-save"></i> Guardar Asignación
+                </button>
+                
+                <button onclick="window.print()" class="btn-custom">
+                    <i class="fas fa-print"></i> Imprimir
+                </button>
+                
+                <a href="{{ url_for('exportar_bancos', anio=anio) }}" class="btn-custom">
+                    <i class="fas fa-file-download"></i> Exportar
+                </a>
             </div>
         </div>
     </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        function regenerarAsignacion() {
+            if (confirm('¿Estás seguro de regenerar la asignación? Se perderá la configuración actual.')) {
+                window.location.href = `{{ url_for('asignacion_bancos', anio=anio) }}?regenerar=true`;
+            }
+        }
+
+        function guardarAsignacion() {
+            // Recopilar datos de la asignación actual
+            const bancos = document.querySelectorAll('.banco');
+            const asignacion = [];
+            
+            bancos.forEach((banco, index) => {
+                const fila = banco.dataset.fila;
+                const columna = banco.dataset.columna;
+                const ocupado = banco.classList.contains('ocupado');
+                const alumno = ocupado ? banco.textContent.trim().split('\n')[0] : '';
+                const grupo = ocupado ? (banco.querySelector('.grupo-badge')?.textContent || 0) : 0;
+                
+                asignacion.push({
+                    fila: parseInt(fila),
+                    columna: parseInt(columna),
+                    numero: index + 1,
+                    alumno: alumno,
+                    grupo: parseInt(grupo),
+                    ocupado: ocupado
+                });
+            });
+
+            // Crear formulario para enviar datos
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ url_for("guardar_bancos") }}';
+            
+            const anioInput = document.createElement('input');
+            anioInput.type = 'hidden';
+            anioInput.name = 'anio';
+            anioInput.value = '{{ anio }}';
+            
+            const dataInput = document.createElement('input');
+            dataInput.type = 'hidden';
+            dataInput.name = 'asignacion_data';
+            dataInput.value = JSON.stringify(asignacion);
+            
+            form.appendChild(anioInput);
+            form.appendChild(dataInput);
+            document.body.appendChild(form);
+            
+            form.submit();
+        }
+
+        // Animaciones de entrada
+        document.addEventListener('DOMContentLoaded', function() {
+            const bancos = document.querySelectorAll('.banco');
+            bancos.forEach((banco, index) => {
+                banco.style.opacity = '0';
+                banco.style.transform = 'scale(0.8)';
+                
+                setTimeout(() => {
+                    banco.style.transition = 'all 0.3s ease';
+                    banco.style.opacity = '1';
+                    banco.style.transform = 'scale(1)';
+                }, index * 20);
+            });
+        });
+    </script>
+
+    <!-- CSS para impresión -->
+    <style media="print">
+        body { background: white !important; }
+        .main-container { background: white !important; box-shadow: none !important; margin: 0 !important; }
+        .btn-custom { display: none !important; }
+        .stats-panel { display: none !important; }
+        .leyenda { display: none !important; }
+    </style>
 </body>
 </html>

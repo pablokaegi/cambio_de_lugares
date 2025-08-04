@@ -19,164 +19,124 @@
         .login-container {
             background: white;
             border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-            padding: 0;
-            overflow: hidden;
-            max-width: 900px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 450px;
             width: 100%;
-            margin: 20px;
         }
         
-        .login-left {
-            background: linear-gradient(45deg, #2c5aa0, #4a7dc4);
-            color: white;
-            padding: 60px 40px;
+        .logo-section {
             text-align: center;
-            position: relative;
-        }
-        
-        .logo-login {
-            background: white;
-            border-radius: 50%;
-            padding: 20px;
             margin-bottom: 30px;
-            display: inline-block;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding-bottom: 20px;
+            border-bottom: 3px solid #2c5aa0;
         }
         
-        .logo-login img {
-            height: 80px;
-            width: 80px;
-            object-fit: contain;
-        }
-        
-        .login-right {
-            padding: 60px 40px;
+        .logo-section h1 {
+            color: #2c5aa0;
+            font-weight: bold;
+            margin-bottom: 10px;
         }
         
         .form-floating {
             margin-bottom: 20px;
         }
         
-        .form-control {
+        .form-floating input {
+            border-radius: 15px;
             border: 2px solid #e9ecef;
-            border-radius: 10px;
-            padding: 15px;
-            font-size: 16px;
-            transition: all 0.3s ease;
+            padding: 1rem 0.75rem;
         }
         
-        .form-control:focus {
+        .form-floating input:focus {
             border-color: #2c5aa0;
             box-shadow: 0 0 0 0.2rem rgba(44, 90, 160, 0.25);
         }
         
         .btn-login {
-            background: linear-gradient(45deg, #2c5aa0, #4a7dc4);
+            background: linear-gradient(45deg, #2c5aa0, #1e4287);
             border: none;
-            padding: 15px 30px;
-            border-radius: 10px;
+            border-radius: 15px;
+            padding: 12px 30px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 1px;
             transition: all 0.3s ease;
             width: 100%;
-            color: white;
         }
         
         .btn-login:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(44, 90, 160, 0.3);
-            color: white;
         }
         
-        .alert-custom {
+        .role-badge {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
             border-radius: 10px;
-            border: none;
-            padding: 15px 20px;
+            padding: 15px;
+            margin-top: 20px;
         }
         
-        @media (max-width: 768px) {
-            .login-left {
-                padding: 40px 20px;
-            }
-            .login-right {
-                padding: 40px 20px;
-            }
+        .role-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .role-item:last-child {
+            margin-bottom: 0;
         }
     </style>
 </head>
 <body>
     <div class="login-container">
-        <div class="row g-0">
-            <div class="col-lg-6">
-                <div class="login-left h-100 d-flex flex-column justify-content-center">
-                    <div class="logo-login">
-                        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo Instituto">
-                    </div>
-                    <h2 class="mb-4">Instituto Puertas del Sol</h2>
-                    <p class="mb-4">Sistema de Asignación de Bancos y Emparejamiento</p>
-                    <div class="features">
-                        <div class="mb-3">
-                            <i class="fas fa-users me-2"></i>
-                            Gestión de Alumnos
-                        </div>
-                        <div class="mb-3">
-                            <i class="fas fa-chair me-2"></i>
-                            Asignación de Bancos
-                        </div>
-                        <div class="mb-3">
-                            <i class="fas fa-chart-line me-2"></i>
-                            Reportes y Estadísticas
-                        </div>
-                    </div>
+        <div class="logo-section">
+            <h1><i class="fas fa-school me-2"></i>Instituto Puertas del Sol</h1>
+            <p class="text-muted mb-0">Sistema de Emparejamiento de Alumnos</p>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="post">
+            <div class="form-floating">
+                <input type="text" class="form-control" id="usuario" name="usuario" placeholder="Usuario" required>
+                <label for="usuario"><i class="fas fa-user me-2"></i>Usuario</label>
             </div>
-            <div class="col-lg-6">
-                <div class="login-right">
-                    <h3 class="text-center mb-4">
-                        <i class="fas fa-lock me-2 text-primary"></i>
-                        Acceso Docentes
-                    </h3>
-                    
-                    {% with messages = get_flashed_messages() %}
-                        {% if messages %}
-                            {% for message in messages %}
-                                <div class="alert alert-danger alert-custom" role="alert">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>{{ message }}
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
-                    
-                    <form method="post">
-                        <div class="form-floating">
-                            <input type="text" class="form-control" id="usuario" name="usuario" placeholder="Usuario" required>
-                            <label for="usuario">
-                                <i class="fas fa-user me-2"></i>Usuario
-                            </label>
-                        </div>
-                        
-                        <div class="form-floating">
-                            <input type="password" class="form-control" id="password" name="password" placeholder="Contraseña" required>
-                            <label for="password">
-                                <i class="fas fa-key me-2"></i>Contraseña
-                            </label>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary btn-login">
-                            <i class="fas fa-sign-in-alt me-2"></i>
-                            Ingresar al Sistema
-                        </button>
-                    </form>
-                    
-                    <div class="text-center mt-4">
-                        <small class="text-muted">
-                            <i class="fas fa-shield-alt me-1"></i>
-                            Acceso restringido solo para personal docente autorizado
-                        </small>
-                    </div>
-                </div>
+            
+            <div class="form-floating">
+                <input type="password" class="form-control" id="password" name="password" placeholder="Contraseña" required>
+                <label for="password"><i class="fas fa-lock me-2"></i>Contraseña</label>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-login">
+                <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+            </button>
+        </form>
+        
+        <div class="role-badge">
+            <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>Usuarios de Ejemplo:</h6>
+            <div class="role-item">
+                <span><strong>Administrador:</strong></span>
+                <span>admin / admin123</span>
+            </div>
+            <div class="role-item">
+                <span><strong>Psicopedagogo:</strong></span>
+                <span>psicopedagogo1 / psico123</span>
+            </div>
+            <div class="role-item">
+                <span><strong>Profesor:</strong></span>
+                <span>profesor1 / prof2024</span>
             </div>
         </div>
     </div>

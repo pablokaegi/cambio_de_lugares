@@ -2,35 +2,489 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Votar</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Votación - Instituto Puertas del Sol</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c5aa0;
+            --secondary-color: #f8f9fa;
+            --accent-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            max-width: 900px;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: var(--primary-color);
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 25px;
+            text-decoration: none;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .student-badge {
+            display: inline-block;
+            background: var(--warning-color);
+            color: #212529;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .instructions {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .voting-section {
+            background: var(--secondary-color);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-left: 5px solid var(--primary-color);
+        }
+        
+        .student-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .student-name {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+        
+        .rating-section {
+            margin-bottom: 15px;
+        }
+        
+        .rating-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        .rating-btn {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #dee2e6;
+            border-radius: 50%;
+            background: white;
+            color: #6c757d;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+        
+        .rating-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            transform: scale(1.1);
+        }
+        
+        .rating-btn.selected {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+        
+        .rating-1.selected { background: #dc3545; border-color: #dc3545; }
+        .rating-2.selected { background: #fd7e14; border-color: #fd7e14; }
+        .rating-3.selected { background: #ffc107; border-color: #ffc107; color: #212529; }
+        .rating-4.selected { background: #20c997; border-color: #20c997; }
+        .rating-5.selected { background: #28a745; border-color: #28a745; }
+        
+        .block-section {
+            text-align: center;
+            padding-top: 15px;
+            border-top: 1px solid #f8f9fa;
+        }
+        
+        .block-checkbox {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+        }
+        
+        .progress-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        
+        .progress {
+            height: 20px;
+            border-radius: 10px;
+        }
+        
+        .btn-submit {
+            background: linear-gradient(45deg, var(--accent-color), #1e7e34);
+            border: none;
+            border-radius: 25px;
+            padding: 15px 40px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            width: 100%;
+            font-size: 1.1rem;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(40, 167, 69, 0.3);
+        }
+        
+        .btn-submit:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .rating-legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .legend-color {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+        }
+        
+        .random-selection {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid var(--warning-color);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .rating-buttons {
+                gap: 8px;
+            }
+            
+            .rating-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 1rem;
+            }
+            
+            .rating-legend {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h2>{{ nombre }}: elegí con quién te gustaría sentarte (1 = menos, 5 = más)</h2>
-    {% if error %}
-        <div style="color: red; font-weight: bold;">{{ error }}</div>
-    {% endif %}
-    <form method="post">
-        {% for compañero in opciones %}
-            <label>{{ compañero }}:
-                <select name="{{ compañero }}">
-                    {% for i in range(1, 6) %}
-                        <option value="{{ i }}">{{ i }}</option>
+    <div class="main-container">
+        <div class="header">
+            <a href="{{ url_for('home', anio=anio) }}" class="back-btn">
+                <i class="fas fa-arrow-left me-2"></i>Volver
+            </a>
+            
+            <h1><i class="fas fa-star me-2"></i>Evaluación de Afinidad</h1>
+            <div class="student-badge">
+                Evaluando por: <strong>{{ nombre }}</strong>
+            </div>
+        </div>
+        
+        <div class="content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-circle me-2"></i>{{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
                     {% endfor %}
-                </select>
-            </label><br>
-        {% endfor %}
-        {% if opciones|length > 1 %}
-            <label for="bloqueo">¿Con quién preferís no sentarte?</label>
-            <select name="bloqueo" id="bloqueo">
-                <option value=""></option>
-                {% for companero in opciones %}
-                    <option value="{{ companero }}">{{ companero }}</option>
-                {% endfor %}
-            </select>
-        {% endif %}
-        <br><br>
-        <button type="submit">Enviar</button>
-    </form>
+                {% endif %}
+            {% endwith %}
+            
+            <form method="post" id="votingForm">
+                <!-- Instrucciones -->
+                <div class="instructions">
+                    <h4 class="mb-3">
+                        <i class="fas fa-info-circle me-2"></i>Instrucciones de Evaluación
+                    </h4>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p class="mb-2"><strong>1.</strong> Evalúa a estos <strong>{{ alumnos|length }} compañeros</strong> seleccionados aleatoriamente</p>
+                            <p class="mb-2"><strong>2.</strong> Califica con un puntaje de afinidad del <strong>1 al 5</strong></p>
+                            <p class="mb-2"><strong>3.</strong> Opcionalmente, puedes bloquear a <strong>1 compañero</strong></p>
+                            <p class="mb-0"><strong>4.</strong> No puedes calificar a todos con la mínima puntuación</p>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="alert alert-warning mb-0">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Importante:</strong> Tus evaluaciones son confidenciales
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Selección aleatoria -->
+                <div class="random-selection">
+                    <h6><i class="fas fa-random me-2"></i>Compañeros seleccionados aleatoriamente para evaluar</h6>
+                    <p class="mb-0">El sistema ha seleccionado {{ alumnos|length }} compañeros para que evalúes</p>
+                </div>
+                
+                <!-- Progreso -->
+                <div class="progress-section">
+                    <h5><i class="fas fa-chart-line me-2"></i>Progreso de Evaluación</h5>
+                    <div class="progress mb-3">
+                        <div class="progress-bar bg-success" id="progressBar" style="width: 0%">
+                            0% completado
+                        </div>
+                    </div>
+                    <div id="progressText" class="text-muted">
+                        0 de {{ alumnos|length }} compañeros evaluados
+                    </div>
+                </div>
+                
+                <!-- Leyenda de puntuaciones -->
+                <div class="voting-section">
+                    <h5 class="mb-3"><i class="fas fa-star me-2"></i>Escala de Afinidad</h5>
+                    <div class="rating-legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #dc3545;"></div>
+                            <span>1 - Muy baja afinidad</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #fd7e14;"></div>
+                            <span>2 - Baja afinidad</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #ffc107;"></div>
+                            <span>3 - Afinidad neutral</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #20c997;"></div>
+                            <span>4 - Buena afinidad</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #28a745;"></div>
+                            <span>5 - Excelente afinidad</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Lista de compañeros para evaluar -->
+                <div class="voting-section">
+                    <h4 class="mb-3">
+                        <i class="fas fa-users me-2"></i>Evalúa a tus compañeros ({{ alumnos|length }}/{{ alumnos|length }})
+                    </h4>
+                    
+                    {% for alumno in alumnos %}
+                    <div class="student-card">
+                        <div class="student-name">
+                            <i class="fas fa-user me-2"></i>{{ alumno }}
+                        </div>
+                        
+                        <div class="rating-section">
+                            <label class="form-label">Califica tu afinidad con este compañero:</label>
+                            <div class="rating-buttons">
+                                {% for rating in range(1, 6) %}
+                                <button type="button" 
+                                        class="rating-btn rating-{{ rating }}" 
+                                        data-student="{{ alumno }}" 
+                                        data-rating="{{ rating }}"
+                                        onclick="setRating('{{ alumno }}', {{ rating }})">
+                                    {{ rating }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="block-section">
+                            <label class="form-check-label">
+                                <input type="checkbox" 
+                                       class="form-check-input block-checkbox" 
+                                       name="bloqueado" 
+                                       value="{{ alumno }}" 
+                                       id="block_{{ loop.index }}"
+                                       onchange="toggleBlock('{{ alumno }}')">
+                                <i class="fas fa-ban text-danger me-1"></i>
+                                No quiero trabajar con este compañero
+                            </label>
+                        </div>
+                        
+                        <!-- Campo oculto para el rating -->
+                        <input type="hidden" name="rating_{{ alumno }}" id="rating_{{ alumno }}" value="">
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="text-center">
+                    <button type="submit" class="btn btn-success btn-submit" id="submitBtn" disabled>
+                        <i class="fas fa-paper-plane me-2"></i>Enviar Evaluación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let ratings = {};
+        let blockedStudent = null;
+        let totalStudents = {{ alumnos|length }};
+        
+        function setRating(student, rating) {
+            // Limpiar selección anterior para este estudiante
+            document.querySelectorAll(`[data-student="${student}"][data-rating]`).forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // Marcar nueva selección
+            document.querySelector(`[data-student="${student}"][data-rating="${rating}"]`).classList.add('selected');
+            
+            // Guardar rating
+            ratings[student] = rating;
+            document.getElementById(`rating_${student}`).value = rating;
+            
+            updateProgress();
+            validateForm();
+        }
+        
+        function toggleBlock(student) {
+            const checkbox = document.querySelector(`input[value="${student}"]`);
+            
+            if (checkbox.checked) {
+                // Desmarcar otros checkboxes
+                document.querySelectorAll('input[name="bloqueado"]').forEach(cb => {
+                    if (cb !== checkbox) {
+                        cb.checked = false;
+                    }
+                });
+                blockedStudent = student;
+            } else {
+                blockedStudent = null;
+            }
+        }
+        
+        function updateProgress() {
+            const ratedCount = Object.keys(ratings).length;
+            const percentage = (ratedCount / totalStudents) * 100;
+            
+            document.getElementById('progressBar').style.width = percentage + '%';
+            document.getElementById('progressBar').textContent = Math.round(percentage) + '% completado';
+            document.getElementById('progressText').textContent = `${ratedCount} de ${totalStudents} compañeros evaluados`;
+        }
+        
+        function validateForm() {
+            const ratedCount = Object.keys(ratings).length;
+            const allRated = ratedCount === totalStudents;
+            
+            // Verificar que no todos tengan rating 1
+            const allMinimum = Object.values(ratings).every(r => r == 1);
+            
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (allRated && !allMinimum) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Enviar Evaluación';
+            } else if (allMinimum) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>No puedes calificar a todos con 1';
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Enviar Evaluación';
+            }
+        }
+        
+        // Validación final
+        document.getElementById('votingForm').addEventListener('submit', function(e) {
+            const ratedCount = Object.keys(ratings).length;
+            
+            if (ratedCount !== totalStudents) {
+                e.preventDefault();
+                alert('Debes evaluar a todos los compañeros asignados');
+                return false;
+            }
+            
+            const allMinimum = Object.values(ratings).every(r => r == 1);
+            if (allMinimum) {
+                e.preventDefault();
+                alert('No puedes calificar a todos con la puntuación mínima');
+                return false;
+            }
+            
+            return true;
+        });
+        
+        // Inicializar
+        updateProgress();
+    </script>
 </body>
 </html>

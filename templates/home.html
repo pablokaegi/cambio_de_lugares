@@ -2,89 +2,334 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Elección de Compañeros</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instituto Puertas del Sol - Sistema de Emparejamientos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c5aa0;
+            --secondary-color: #f8f9fa;
+            --accent-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            max-width: 1200px;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: var(--primary-color);
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 25px;
+            text-decoration: none;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .year-selector {
+            background: var(--secondary-color);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 5px solid var(--primary-color);
+        }
+        
+        .students-table {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        
+        .btn-custom {
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            margin: 0 10px 10px 0;
+            display: inline-block;
+            text-decoration: none;
+            border: none;
+        }
+        
+        .btn-primary-custom {
+            background: linear-gradient(45deg, var(--primary-color), #1e4287);
+            color: white;
+        }
+        
+        .btn-success-custom {
+            background: linear-gradient(45deg, var(--accent-color), #1e7e34);
+            color: white;
+        }
+        
+        .btn-info-custom {
+            background: linear-gradient(45deg, #17a2b8, #138496);
+            color: white;
+        }
+        
+        .btn-danger-custom {
+            background: linear-gradient(45deg, var(--danger-color), #c82333);
+            color: white;
+        }
+        
+        .btn-warning-custom {
+            background: linear-gradient(45deg, var(--warning-color), #856404);
+            color: white;
+        }
+        
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .actions-section {
+            background: var(--secondary-color);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        .progress-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        
+        .progress {
+            height: 25px;
+            border-radius: 15px;
+        }
+        
+        .alert-custom {
+            border: none;
+            border-radius: 10px;
+            padding: 15px 20px;
+        }
+    </style>
 </head>
 <body>
-    <div style="display: flex; align-items: center; margin-bottom: 20px;">
-        <img src="/static/logo.png" alt="Logo Instituto Puertas del Sol" style="height: 70px; margin-right: 20px;">
-        <h1 style="margin: 0; font-size: 2.2em;">Instituto Puertas del Sol</h1>
+    <div class="main-container">
+        <div class="header">
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+            </a>
+            
+            <div class="user-info">
+                <i class="fas fa-user me-2"></i>{{ usuario or 'Usuario' }} 
+                {% if rol %}
+                | {{ rol.title() }}
+                {% endif %}
+            </div>
+            
+            <h1><i class="fas fa-school me-2"></i>Instituto Puertas del Sol</h1>
+            <p class="mb-0">Sistema de Emparejamiento de Alumnos</p>
+        </div>
+        
+        <div class="content">
+            <!-- Selector de año -->
+            <div class="year-selector">
+                <h4 class="mb-3"><i class="fas fa-graduation-cap me-2"></i>Seleccionar Año</h4>
+                <form method="get" id="form-anio">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <select name="anio" id="anio" class="form-select form-select-lg" onchange="this.form.submit()">
+                                <option value="">-- Selecciona un año --</option>
+                                {% if alumnos_por_anio %}
+                                    {% for year in alumnos_por_anio.keys() %}
+                                    <option value="{{ year }}" {% if anio == year %}selected{% endif %}>
+                                        {% if year == 'primero' %}Primer Año
+                                        {% elif year == 'segundo' %}Segundo Año
+                                        {% elif year == 'tercero' %}Tercer Año
+                                        {% elif year == 'cuarto' %}Cuarto Año
+                                        {% elif year == 'quinto' %}Quinto Año
+                                        {% elif year == 'sexto' %}Sexto Año
+                                        {% else %}{{ year.title() }}
+                                        {% endif %}
+                                    </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="sexto" {% if anio == 'sexto' %}selected{% endif %}>Sexto Año</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            {% if anio %}
+                            <div class="text-muted">
+                                <i class="fas fa-users me-2"></i>
+                                Total de alumnos: {{ alumnos|length }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            {% if anio and alumnos %}
+            <!-- Progreso de votación -->
+            <div class="progress-section">
+                {% set total_alumnos = alumnos|length %}
+                {% set votaron = ya_votaron|length %}
+                {% set restantes = total_alumnos - votaron %}
+                {% set porcentaje = (votaron / total_alumnos * 100) if total_alumnos > 0 else 0 %}
+                
+                <h5><i class="fas fa-chart-pie me-2"></i>Progreso de Votación</h5>
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-success" style="width: {{ porcentaje }}%">
+                        {{ "%.1f"|format(porcentaje) }}% ({{ votaron }}/{{ total_alumnos }})
+                    </div>
+                </div>
+                
+                {% if restantes > 0 %}
+                <div class="alert alert-warning alert-custom">
+                    <i class="fas fa-clock me-2"></i>
+                    <strong>{{ restantes }} alumno(s) pendiente(s) de votar</strong>
+                </div>
+                {% else %}
+                <div class="alert alert-success alert-custom">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>¡Todos los alumnos han completado su votación!</strong>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Lista de alumnos -->
+            <div class="students-table">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th width="60">#</th>
+                                <th>Nombre del Alumno</th>
+                                <th width="120" class="text-center">Estado</th>
+                                <th width="120" class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alumno in alumnos %}
+                            <tr>
+                                <td><strong>{{ loop.index }}</strong></td>
+                                <td>{{ alumno }}</td>
+                                <td class="text-center">
+                                    {% if alumno in ya_votaron %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Completado
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-clock me-1"></i>Pendiente
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if alumno not in ya_votaron %}
+                                        <a href="{{ url_for('votar', nombre=alumno, anio=anio) }}" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-vote-yea me-1"></i>Votar
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">
+                                            <i class="fas fa-check-circle me-1"></i>Ya votó
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sección de acciones -->
+            <div class="actions-section">
+                <h5 class="mb-3">
+                    <i class="fas fa-tools me-2"></i>
+                    Acciones Disponibles
+                </h5>
+                
+                <a href="{{ url_for('resultados', anio=anio) }}" class="btn-custom btn-primary-custom">
+                    <i class="fas fa-users me-2"></i>Ver Grupos
+                </a>
+                
+                {% if 'asignacion_bancos' in url_for.__globals__.get('app').view_functions %}
+                <a href="{{ url_for('asignacion_bancos', anio=anio) }}" class="btn-custom btn-success-custom">
+                    <i class="fas fa-chair me-2"></i>Asignar Bancos
+                </a>
+                {% endif %}
+                
+                <!-- Botón de estadísticas solo para admin y psicopedagogos -->
+                {% if rol in ['administrador', 'psicopedagogo'] %}
+                <a href="{{ url_for('estadisticas', anio=anio) }}" class="btn-custom btn-info-custom">
+                    <i class="fas fa-chart-bar me-2"></i>Estadísticas
+                </a>
+                {% endif %}
+                
+                <form method="post" action="{{ url_for('reset_votos') }}" style="display: inline;">
+                    <input type="hidden" name="anio" value="{{ anio }}">
+                    <button type="submit" class="btn-custom btn-danger-custom" onclick="return confirm('¿Estás seguro de que quieres resetear todos los votos?')">
+                        <i class="fas fa-trash me-2"></i>Reset Votos
+                    </button>
+                </form>
+
+                {% if votos_data and votos_data|length > 0 %}
+                    <a href="{{ url_for('asignacion_bancos', anio=anio) }}" class="btn-custom btn-warning-custom">
+                        <i class="fas fa-chair"></i> Asignar Bancos del Aula
+                    </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
     </div>
-    <section style="background: #f9f9f9; border-radius: 8px; padding: 18px 22px 10px 22px; margin-bottom: 28px; border: 1px solid #e0e0e0;">
-        <h2 style="margin-top:0; font-size:1.3em; color:#333;">App de Emparejamiento de Alumnos</h2>
-        <p>Esta aplicación permite organizar grupos de alumnos según sus preferencias y notas.</p>
-        <strong>Metodología:</strong>
-        <ul>
-            <li>Cada alumno puntúa a 5 compañeros y puede bloquear a uno.</li>
-            <li>La votación es anónima y validada para evitar sesgos.</li>
-            <li>El sistema empareja automáticamente en grupos de 2 o 3, priorizando afinidad y evitando bloqueos.</li>
-            <li>Se pueden importar listas y notas desde PDF, y exportar estadísticas a Excel.</li>
-        </ul>
-        <strong>¿Cómo funciona la combinación entre aleatoriedad y elección?</strong>
-        <p>
-            El sistema utiliza una combinación de preferencias individuales (las puntuaciones que cada alumno asigna a sus compañeros) y un algoritmo matemático para formar los grupos. Cada alumno debe asignar un puntaje único del 1 al 5 a cinco compañeros distintos, lo que obliga a priorizar y distribuir sus preferencias. Además, puede bloquear a un compañero si lo desea.
-        </p>
-        <p>
-            <b>Algoritmo detrás del emparejamiento:</b> El algoritmo busca pares de alumnos con la mayor afinidad mutua, es decir, aquellos que se han puntuado alto entre sí. Se priorizan los pares con mayor "nivel mutuo" (el máximo de los dos puntajes cruzados). Si no hay afinidad mutua suficiente, el sistema recurre a la aleatoriedad para completar los grupos, asegurando que nadie quede solo y que los bloqueos sean respetados. Así, se logra un equilibrio entre la voz de los alumnos y la equidad aleatoria.
-        </p>
-        <p style="color:#b00; font-weight:bold;">Versión beta: esta plataforma está en desarrollo y sujeta a cambios y mejoras continuas.</p>
-    </section>
-    <form method="get" id="form-anio" style="margin-bottom: 20px;">
-        <label for="anio">Seleccioná el año:</label>
-        <select name="anio" id="anio" onchange="this.form.submit()">
-            <option value="">-- Elegí un año --</option>
-            <option value="sexto" {% if anio == 'sexto' %}selected{% endif %}>Sexto año</option>
-            <!-- Aquí luego se agregan más años -->
-        </select>
-    </form>
-    {% if anio == 'sexto' %}
-    <h2>Seleccioná tu nombre</h2>
-    <p>Total de alumnos: {{ alumnos|length }}</p>
-    <table border="1" cellpadding="6" style="border-collapse: collapse; margin-bottom: 20px;">
-        <tr style="background: #f0f0f0;">
-            <th>#</th>
-            <th>Nombre</th>
-            <th>Votar</th>
-        </tr>
-        {% set restantes = alumnos|length - ya_votaron|length %}
-        {% if restantes > 0 %}
-            {% for alumno in alumnos %}
-                <tr>
-                    <td>{{ loop.index }}</td>
-                    <td>{{ alumno }}</td>
-                    <td>
-                        {% if alumno not in ya_votaron %}
-                            <a href="{{ url_for('votar', nombre=alumno) }}">Votar</a>
-                        {% else %}
-                            <span style="color: gray;">Ya votó</span>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% endfor %}
-        {% else %}
-            <tr>
-                <td colspan="3" style="color: green; font-weight: bold; text-align: center;">¡Todos los alumnos ya votaron!</td>
-            </tr>
-        {% endif %}
-    </table>
-    {% if restantes == 0 %}
-    <div style="text-align:center; margin-bottom:20px;">
-        <form action="/resultados" method="get" style="display:inline;">
-            <button type="submit" style="font-size:1.1em; padding:8px 22px; background:#4caf50; color:white; border:none; border-radius:5px; cursor:pointer;">Ver resultados</button>
-        </form>
-    </div>
-    {% endif %}
-    {% endif %}
-    <form method="post" action="/reset" style="display:inline;">
-        <button type="submit">Resetear votos</button>
-    </form>
-    <form method="post" action="/aleatorio" style="display:inline;">
-        <button type="submit">Selección aleatoria</button>
-    </form>
-    <form method="post" action="/subir_notas" enctype="multipart/form-data" style="margin-top:20px;">
-        <label for="notas_pdf">Importar PDF de notas (opcional):</label>
-        <input type="file" name="notas_pdf" id="notas_pdf" accept="application/pdf">
-        <button type="submit">Subir PDF</button>
-    </form>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

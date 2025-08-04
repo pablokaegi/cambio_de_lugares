@@ -2,22 +2,504 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Resultados</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grupos Formados - {{anio.title()}}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .grupo-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .grupo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+        
+        .grupo-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+        
+        .grupo-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px 12px 0 0;
+            padding: 15px 20px;
+            margin: -15px -15px 15px -15px;
+        }
+        
+        .alumno-item {
+            background: white;
+            padding: 12px 15px;
+            margin: 8px 0;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+        
+        .alumno-item:hover {
+            transform: translateX(5px);
+            border-left-color: #764ba2;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .stats-cards {
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .btn-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 25px;
+            color: white;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin: 5px;
+        }
+        
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .btn-outline-custom {
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+        }
+        
+        .btn-outline-custom:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .page-title {
+            color: #2c3e50;
+            font-weight: 700;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .grupo-size-badge {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 20px;
+            padding: 5px 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .banco-preview-card {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(255, 193, 7, 0.2);
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .banco-preview-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(255, 193, 7, 0.3);
+        }
+
+        .banco-preview-header {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: white;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .banco-preview-body {
+            padding: 15px;
+        }
+
+        .banco-size-badge {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            border-radius: 15px;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .alumno-banco-item {
+            background: white;
+            padding: 8px 12px;
+            margin: 6px 0;
+            border-radius: 8px;
+            border-left: 3px solid #ffc107;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .alumno-banco-item:hover {
+            transform: translateX(3px);
+            border-left-color: #fd7e14;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                margin: 10px;
+                padding: 20px;
+            }
+            
+            .stat-number {
+                font-size: 2rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Grupos formados</h1>
-    <ul>
-        {% for grupo in emparejamientos %}
-            <li>🔸 {{ grupo|join(' + ') }}</li>
-        {% endfor %}
-    </ul>
-    {% if mostrar_encuesta %}
-    <div style="text-align:center; margin-top:30px;">
-        <form action="/conformidad" method="get" style="display:inline;">
-            <button type="submit" style="font-size:1.1em; padding:8px 22px; background:#2196f3; color:white; border:none; border-radius:5px; cursor:pointer;">Encuesta de conformidad</button>
-        </form>
+    <div class="container">
+        <div class="main-container">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h1 class="page-title">
+                    <i class="fas fa-users text-primary"></i>
+                    Grupos Formados - {{anio.title()}}
+                </h1>
+            </div>
+
+            {% if emparejamientos %}
+                <!-- Estadísticas -->
+                <div class="row stats-cards">
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card">
+                            <div class="stat-number">{{emparejamientos|length}}</div>
+                            <div class="stat-label">
+                                <i class="fas fa-layer-group"></i> Grupos Formados
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card">
+                            <div class="stat-number">
+                                {{emparejamientos|map('length')|sum|default(0)}}
+                            </div>
+                            <div class="stat-label">
+                                <i class="fas fa-user-friends"></i> Total Alumnos
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card">
+                            <div class="stat-number">
+                                {%- set sizes = emparejamientos|map('length')|list -%}
+                                {{(sizes|sum / sizes|length)|round(1) if sizes and sizes|length > 0 else 0}}
+                            </div>
+                            <div class="stat-label">
+                                <i class="fas fa-calculator"></i> Promedio por Grupo
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card">
+                            <div class="stat-number">
+                                {{emparejamientos|map('length')|max if emparejamientos else 0}}
+                            </div>
+                            <div class="stat-label">
+                                <i class="fas fa-crown"></i> Grupo Más Grande
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grupos -->
+                <div class="row">
+                    {% for grupo in emparejamientos %}
+                    <div class="col-lg-6 col-md-12">
+                        <div class="grupo-card">
+                            <div class="grupo-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-users"></i>
+                                        Grupo {{loop.index}}
+                                    </h5>
+                                    <span class="grupo-size-badge">
+                                        {{grupo|length}} 
+                                        {{ 'alumno' if grupo|length == 1 else 'alumnos' }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="card-body">
+                                {% for alumno in grupo %}
+                                <div class="alumno-item">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            <i class="fas fa-user-circle text-primary" style="font-size: 1.2rem;"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <strong>{{alumno}}</strong>
+                                        </div>
+                                        <div class="text-muted">
+                                            <small>#{{loop.index}}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Separador -->
+                <hr style="margin: 40px 0; border: none; height: 2px; background: linear-gradient(90deg, #667eea, #764ba2);">
+
+                <!-- Vista de Pares para Bancos -->
+                <div class="row mt-5">
+                    <div class="col-12">
+                        <div class="text-center mb-4">
+                            <h3 style="color: #2c3e50; font-weight: 600;">
+                                <i class="fas fa-chair text-warning"></i>
+                                Distribución en Bancos (Pares)
+                            </h3>
+                            <p class="text-muted">Así se distribuirán los grupos en los bancos del aula (máximo 2-3 alumnos por banco)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    {% set pares_bancos = [] %}
+                    {% set alumnos_solos = [] %}
+                    
+                    {# Convertir grupos en pares para mostrar #}
+                    {% for grupo in emparejamientos %}
+                        {% if grupo|length == 1 %}
+                            {% set _ = alumnos_solos.extend(grupo) %}
+                        {% elif grupo|length == 2 %}
+                            {% set _ = pares_bancos.append(grupo) %}
+                        {% elif grupo|length >= 3 %}
+                            {% for i in range(0, grupo|length-1, 2) %}
+                                {% if i+1 < grupo|length %}
+                                    {% set _ = pares_bancos.append([grupo[i], grupo[i+1]]) %}
+                                {% else %}
+                                    {% set _ = alumnos_solos.append(grupo[i]) %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {# Emparejar alumnos solos #}
+                    {% for i in range(0, alumnos_solos|length-1, 2) %}
+                        {% if i+1 < alumnos_solos|length %}
+                            {% set _ = pares_bancos.append([alumnos_solos[i], alumnos_solos[i+1]]) %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {# Mostrar pares para bancos #}
+                    {% for par in pares_bancos %}
+                    <div class="col-lg-4 col-md-6">
+                        <div class="banco-preview-card">
+                            <div class="banco-preview-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-chair"></i>
+                                    Banco {{loop.index}}
+                                </h6>
+                                <span class="banco-size-badge">
+                                    {{par|length}} {{ 'alumno' if par|length == 1 else 'alumnos' }}
+                                </span>
+                            </div>
+                            
+                            <div class="banco-preview-body">
+                                {% for alumno in par %}
+                                <div class="alumno-banco-item">
+                                    <i class="fas fa-user-circle text-success"></i>
+                                    <strong>{{alumno}}</strong>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Botón para ir directamente a asignar bancos -->
+                <div class="text-center mt-4">
+                    <a href="{{ url_for('asignacion_bancos', anio=anio) }}" class="btn-custom btn-warning" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+                        <i class="fas fa-chair"></i> Ver Distribución Física en el Aula
+                    </a>
+                </div>
+
+                <!-- Información adicional -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="alert alert-info" style="border-radius: 15px; border: none; background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-info-circle"></i>
+                                Información sobre la Agrupación
+                            </h6>
+                            <p class="mb-2">
+                                <strong>Algoritmo:</strong> Los grupos se forman priorizando las afinidades mutuas basadas en las votaciones de los estudiantes.
+                            </p>
+                            <p class="mb-0">
+                                <strong>Criterios:</strong> Se consideran las calificaciones recíprocas y se evitan los bloqueos mutuos para crear grupos armoniosos.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            {% else %}
+                <!-- Estado vacío -->
+                <div class="empty-state">
+                    <i class="fas fa-users-slash"></i>
+                    <h3>No hay grupos formados</h3>
+                    <p class="lead">Aún no se han registrado suficientes votaciones para formar grupos.</p>
+                    <p class="text-muted">
+                        Los estudiantes deben completar sus votaciones para generar los emparejamientos automáticos.
+                    </p>
+                </div>
+            {% endif %}
+
+            <!-- Botones de Acción -->
+            <div class="text-center mt-4">
+                <a href="{{ url_for('home', anio=anio) }}" class="btn-custom">
+                    <i class="fas fa-arrow-left"></i> Volver al Home
+                </a>
+                
+                {% if emparejamientos %}
+                <a href="{{ url_for('asignacion_bancos', anio=anio) }}" class="btn-custom">
+                    <i class="fas fa-chair"></i> Asignar Bancos
+                </a>
+                
+                <a href="{{ url_for('estadisticas', anio=anio) }}" class="btn-custom">
+                    <i class="fas fa-chart-bar"></i> Ver Estadísticas
+                </a>
+                
+                <button onclick="window.print()" class="btn-outline-custom">
+                    <i class="fas fa-print"></i> Imprimir
+                </button>
+                {% endif %}
+            </div>
+        </div>
     </div>
-    {% endif %}
+
+    <!-- Script para mejorar la experiencia -->
+    <script>
+        // Animación de entrada
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.grupo-card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+
+        // Efecto hover en alumnos
+        document.querySelectorAll('.alumno-item').forEach(item => {
+            item.addEventListener('mouseenter', function() {
+                this.style.background = 'linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%)';
+            });
+            
+            item.addEventListener('mouseleave', function() {
+                this.style.background = 'white';
+            });
+        });
+    </script>
+
+    <!-- CSS para impresión -->
+    <style media="print">
+        body {
+            background: white !important;
+        }
+        
+        .main-container {
+            background: white !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+        }
+        
+        .btn-custom, .btn-outline-custom {
+            display: none !important;
+        }
+        
+        .grupo-card {
+            break-inside: avoid;
+            margin-bottom: 20px;
+        }
+        
+        .stats-cards {
+            display: none !important;
+        }
+    </style>
 </body>
 </html>
