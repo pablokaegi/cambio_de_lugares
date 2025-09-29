@@ -803,9 +803,8 @@ def asignacion_bancos():
                                  total_alumnos=total_alumnos,
                                  guardado_disponible=True)
     
-    # Cargar votos y generar emparejamientos
-    votos_archivo = f"votos_{anio}.json"
-    votos = cargar_json_seguro(votos_archivo)
+    # Cargar votos desde la base de datos y generar emparejamientos
+    votos = db_manager.obtener_votos_por_anio(anio)
     
     if not votos:
         flash("No hay votos registrados para generar asignación de bancos", "warning")
@@ -952,10 +951,8 @@ def guardar_bancos():
         
         if db_success:
             flash(f"✅ Asignación '{nombre_asignacion}' guardada exitosamente", "success")
-            print(f"✅ Asignación '{nombre_asignacion}' guardada en BD para {anio}")
         else:
             flash("❌ Error al guardar la asignación en la base de datos", "error")
-            print(f"❌ Error guardando asignación '{nombre_asignacion}' en BD para {anio}")
             
     except Exception as e:
         print(f"Error guardando bancos: {e}")
@@ -1032,10 +1029,8 @@ def auto_guardar_tras_votacion():
         return {'success': False, 'error': 'Año no especificado'}
     
     try:
-        # Verificar que haya votos suficientes
-        votos = db_manager.cargar_votos(anio)
-        if not votos:
-            votos = cargar_json_seguro(f"votos_{anio}.json")
+        # Verificar que haya votos suficientes desde la base de datos
+        votos = db_manager.obtener_votos_por_anio(anio)
         
         if len(votos) < 2:  # Mínimo 2 votos para generar asignación
             return {'success': False, 'error': 'Votos insuficientes'}
@@ -1208,13 +1203,16 @@ def configuracion_aula():
 @app.route("/estadisticas/<anio>")
 @role_required('administrador', 'psicopedagogo')
 def estadisticas(anio):
-    """Muestra estadísticas detalladas de votación"""
+    """Muestra estadísticas detalladas de votación desde la base de datos"""
+    from collections import Counter, defaultdict
+    import statistics
+    
     if anio not in alumnos_por_anio:
         flash("Año no válido", "error")
         return redirect(url_for('home'))
     
-    votos_archivo = f"votos_{anio}.json"
-    votos = cargar_json_seguro(votos_archivo)
+    # Cargar votos desde la base de datos
+    votos = db_manager.obtener_votos_por_anio(anio)
     
     if not votos:
         flash("No hay votos registrados para este año", "warning")
@@ -1232,8 +1230,10 @@ def estadisticas(anio):
     bloqueos_mutuos = []
     
     for votante, datos in votos.items():
-        ratings = datos.get('ratings', {})
-        bloqueado = datos.get('bloqueado')
+        # En BD: 'calificaciones' en lugar de 'ratings'
+        ratings = datos.get('calificaciones', {})
+        # En BD: 'alumno_bloqueado' en lugar de 'bloqueado'
+        bloqueado = datos.get('alumno_bloqueado')
         
         total_ratings += len(ratings)
         if bloqueado:
@@ -1246,10 +1246,10 @@ def estadisticas(anio):
     
     # Detectar bloqueos mutuos
     for votante, datos in votos.items():
-        bloqueado = datos.get('bloqueado')
+        bloqueado = datos.get('alumno_bloqueado')
         if bloqueado and bloqueado in votos:
             datos_bloqueado = votos[bloqueado]
-            if datos_bloqueado.get('bloqueado') == votante:
+            if datos_bloqueado.get('alumno_bloqueado') == votante:
                 par_bloqueado = tuple(sorted([votante, bloqueado]))
                 if par_bloqueado not in bloqueos_mutuos:
                     bloqueos_mutuos.append(par_bloqueado)
@@ -1352,7 +1352,6 @@ def reset_votos_render():
             
             # Resultados del reset
             if exito_votos and exito_rankings and exito_bancos:
-                print(f"✅ Reset DB completo: {votos_borrados} votos, {rankings_borrados} rankings y {bancos_borrados} asignaciones borrados de {anio}")
                 flash(f"✅ Base de datos: {votos_borrados} votos, {rankings_borrados} rankings y {bancos_borrados} asignaciones eliminados", "success")
             else:
                 # Reporte detallado de qué funcionó y qué no
@@ -1999,10 +1998,8 @@ def analisis_psicopedagogico(anio):
         flash("Año no válido", "error")
         return redirect(url_for('home'))
     
-    # Cargar votos
-    votos = db_manager.cargar_votos(anio)
-    if not votos:
-        votos = cargar_json_seguro(f"votos_{anio}.json")
+    # Cargar votos desde la base de datos
+    votos = db_manager.obtener_votos_por_anio(anio)
     
     if not votos:
         flash("No hay datos de votos para analizar", "warning")
