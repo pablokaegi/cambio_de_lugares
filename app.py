@@ -1108,7 +1108,11 @@ def exportar_bancos(anio):
         return redirect(url_for('asignacion_bancos', anio=anio))
     
     try:
-        import pandas as pd
+        try:
+            import pandas as pd
+        except ImportError:
+            flash("❌ Funcionalidad de exportación no disponible (pandas no instalado)", "error")
+            return redirect(url_for('asignacion_bancos', anio=anio))
         
         # Preparar datos para Excel
         asignacion = bancos_data['asignacion']
@@ -1433,7 +1437,12 @@ def exportar_votos(anio):
                 })
         
         # Crear DataFrame
-        import pandas as pd
+        try:
+            import pandas as pd
+        except ImportError:
+            flash("❌ Funcionalidad de exportación no disponible (pandas no instalado)", "error")
+            return redirect(url_for('home', anio=anio))
+            
         df = pd.DataFrame(datos_excel)
         
         # Nombre del archivo

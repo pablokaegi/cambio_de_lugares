@@ -1,5 +1,5 @@
-# Requirements for Alumnos App - Sistema de Votación y Asignación de Bancos
-# Actualizado para la versión modularizada con análisis psicopedagógico
+# Requirements for Alumnos App - Minimalista para Render
+# Solo dependencias esenciales para el funcionamiento básico
 
 # Framework principal
 Flask==3.0.0
@@ -13,12 +13,10 @@ blinker==1.7.0
 # Servidor WSGI para producción (Render)
 gunicorn==21.2.0
 
-# Para exportación de reportes (opcional, mantenido por compatibilidad)
+# Para exportación básica de reportes (opcional)
 PyPDF2==3.0.1
-pandas==2.1.1
-openpyxl==3.1.2
 
 # Nota: SQLite está incluido en Python standard library
-# Nota: Todas las funcionalidades de análisis estadístico usan la biblioteca estándar de Python
+# Nota: pandas y openpyxl son opcionales para exportación avanzada
 
 
