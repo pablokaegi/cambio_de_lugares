@@ -292,6 +292,20 @@
                                 {% endfor %}
                             </div>
                             {% endif %}
+                            
+                            <!-- En la sección del ranking individual, agregar: -->
+                            <div class="trivia-stats" style="font-size: 0.8rem; margin-top: 5px;">
+                                {% if stats.trivia_stats %}
+                                <div style="color: #6c757d;">
+                                    🧠 Trivia: {{stats.trivia_stats.preguntas_correctas}}/{{stats.trivia_stats.preguntas_respondidas}} 
+                                    ({{((stats.trivia_stats.preguntas_correctas / stats.trivia_stats.preguntas_respondidas) * 100)|round(0)}}%)
+                                    
+                                    {% if stats.trivia_stats.mejor_racha > 0 %}
+                                    | 🔥 Mejor racha: {{stats.trivia_stats.mejor_racha}}
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
                         </div>
                         
                         <div class="puntos-info">

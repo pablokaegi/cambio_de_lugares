@@ -435,6 +435,10 @@
                     <i class="fas fa-chair"></i> Asignar Bancos
                 </a>
                 
+                <button onclick="autoGuardarAsignacion()" class="btn-custom" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                    <i class="fas fa-magic"></i> Auto-Guardar Asignación
+                </button>
+                
                 <a href="{{ url_for('estadisticas', anio=anio) }}" class="btn-custom">
                     <i class="fas fa-chart-bar"></i> Ver Estadísticas
                 </a>
@@ -501,5 +505,59 @@
             display: none !important;
         }
     </style>
+    
+    <script>
+        function autoGuardarAsignacion() {
+            // Mostrar loading
+            const button = event.target;
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            button.disabled = true;
+            
+            // Hacer petición para auto-guardar
+            const formData = new FormData();
+            formData.append('anio', '{{ anio }}');
+            
+            fetch('{{ url_for("auto_guardar_tras_votacion") }}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Mostrar éxito y redirigir
+                    button.innerHTML = '<i class="fas fa-check"></i> ¡Guardado!';
+                    button.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                    
+                    setTimeout(() => {
+                        window.location.href = `{{ url_for('asignacion_bancos', anio=anio) }}`;
+                    }, 1500);
+                } else {
+                    // Mostrar error
+                    button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+                    button.style.background = 'linear-gradient(135deg, #dc3545 0%, #e83e8c 100%)';
+                    alert('Error al guardar: ' + (data.error || 'Error desconocido'));
+                    
+                    setTimeout(() => {
+                        button.innerHTML = originalHTML;
+                        button.disabled = false;
+                        button.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                    }, 2000);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+                button.style.background = 'linear-gradient(135deg, #dc3545 0%, #e83e8c 100%)';
+                alert('Error de conexión');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.disabled = false;
+                    button.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                }, 2000);
+            });
+        }
+    </script>
 </body>
 </html>

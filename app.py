@@ -7,8 +7,19 @@ from functools import wraps
 from collections import Counter, defaultdict
 from datetime import datetime
 
+# Importar el manejador de base de datos
+from database import db_manager
+
+# Importar módulos modularizados
+from preguntas_trivia import banco_preguntas, obtener_pregunta_aleatoria
+from gestor_alumnos import gestor_alumnos, obtener_alumnos_por_anio
+from analizador_psicopedagogico import analizador_psicopedagogico
+
 app = Flask(__name__)
 app.secret_key = 'puertas_del_sol_secret_key_2024'
+
+# Configurar el analizador psicopedagógico con la base de datos
+analizador_psicopedagogico.db_manager = db_manager
 
 # 1. PRIMERO: Usuarios base (sin cargar archivo aún)
 USUARIOS_DOCENTES = {
@@ -48,77 +59,246 @@ def guardar_json_seguro(archivo, datos):
         return False
 # Agregar después de las funciones helper existentes:
 
-def calcular_puntos_gamificacion(voto_data):
-    """Calcula puntos gamificados basados en la calidad del voto"""
+import random
+from datetime import datetime
+
+# Base de datos de preguntas para trivia
+PREGUNTAS_TRIVIA = {
+    'historia_cordoba': [
+        {
+            'pregunta': '¿En qué año se fundó la ciudad de Córdoba?',
+            'opciones': ['1573', '1580', '1588', '1595'],
+            'respuesta_correcta': 0,
+            'puntos': 15,
+            'explicacion': 'Córdoba fue fundada por Jerónimo Luis de Cabrera el 6 de julio de 1573.'
+        },
+        {
+            'pregunta': '¿Quién fundó la Universidad Nacional de Córdoba?',
+            'opciones': ['Los Jesuitas', 'Los Franciscanos', 'El Virrey', 'Los Dominicos'],
+            'respuesta_correcta': 0,
+            'puntos': 15,
+            'explicacion': 'La UNC fue fundada por los Jesuitas en 1613, siendo la más antigua de Argentina.'
+        },
+        {
+            'pregunta': '¿Cómo se llama el barrio histórico de Córdoba Capital?',
+            'opciones': ['La Cañada', 'Güemes', 'San Vicente', 'Alberdi'],
+            'respuesta_correcta': 0,
+            'puntos': 10,
+            'explicacion': 'La Cañada es el barrio histórico donde está la Catedral y el Cabildo.'
+        }
+    ],
+    'geografia_cordoba': [
+        {
+            'pregunta': '¿Cuál es el río más importante de Córdoba?',
+            'opciones': ['Río Primero', 'Río Segundo', 'Río Tercero', 'Río Cuarto'],
+            'respuesta_correcta': 0,
+            'puntos': 10,
+            'explicacion': 'El Río Primero (Suquía) atraviesa la capital cordobesa.'
+        },
+        {
+            'pregunta': '¿En qué sierras se encuentra el Cerro Champaquí?',
+            'opciones': ['Sierras Grandes', 'Sierras Chicas', 'Sierras del Norte', 'Sierras del Sur'],
+            'respuesta_correcta': 0,
+            'puntos': 15,
+            'explicacion': 'El Champaquí (2884m) es el pico más alto de Córdoba, en las Sierras Grandes.'
+        }
+    ],
+    'cultura_argentina': [
+        {
+            'pregunta': '¿Quién escribió el Martín Fierro?',
+            'opciones': ['José Hernández', 'Domingo Sarmiento', 'Bartolomé Mitre', 'Leopoldo Lugones'],
+            'respuesta_correcta': 0,
+            'puntos': 15,
+            'explicacion': 'José Hernández escribió "El Gaucho Martín Fierro" (1872) y "La Vuelta de Martín Fierro" (1879).'
+        },
+        {
+            'pregunta': '¿En qué año se sancionó la Constitución Nacional Argentina?',
+            'opciones': ['1853', '1860', '1810', '1816'],
+            'respuesta_correcta': 0,
+            'puntos': 15,
+            'explicacion': 'La Constitución fue sancionada en Santa Fe en 1853.'
+        }
+    ],
+    'ciencias_naturales': [
+        {
+            'pregunta': '¿Cuál es el animal nacional de Argentina?',
+            'opciones': ['El Hornero', 'El Cóndor', 'El Ñandú', 'La Vicuña'],
+            'respuesta_correcta': 0,
+            'puntos': 10,
+            'explicacion': 'El Hornero es el ave nacional argentina, símbolo del trabajo y la perseverancia.'
+        },
+        {
+            'pregunta': '¿Qué tipo de clima predomina en Córdoba?',
+            'opciones': ['Templado continental', 'Subtropical', 'Árido', 'Mediterráneo'],
+            'respuesta_correcta': 0,
+            'puntos': 12,
+            'explicacion': 'Córdoba tiene clima templado continental con veranos cálidos e inviernos secos.'
+        }
+    ],
+    'matematicas': [
+        {
+            'pregunta': '¿Cuál es el resultado de 15² - 10²?',
+            'opciones': ['125', '225', '325', '25'],
+            'respuesta_correcta': 0,
+            'puntos': 12,
+            'explicacion': '15² = 225 y 10² = 100, por lo tanto 225 - 100 = 125.'
+        },
+        {
+            'pregunta': 'Si un triángulo tiene ángulos de 60°, 60° y 60°, ¿qué tipo de triángulo es?',
+            'opciones': ['Equilátero', 'Isósceles', 'Escaleno', 'Rectángulo'],
+            'respuesta_correcta': 0,
+            'puntos': 10,
+            'explicacion': 'Un triángulo con los tres ángulos iguales (60°) es equilátero.'
+        }
+    ],
+    'deportes_cordoba': [
+        {
+            'pregunta': '¿Cuál es el club de fútbol más antiguo de Córdoba?',
+            'opciones': ['Talleres', 'Belgrano', 'Instituto', 'Racing'],
+            'respuesta_correcta': 0,
+            'puntos': 15,
+            'explicacion': 'Talleres fue fundado en 1913, siendo el club más antiguo de la provincia.'
+        }
+    ]
+}
+
+def obtener_pregunta_aleatoria():
+    """Selecciona una pregunta aleatoria de cualquier categoría"""
+    # Obtener todas las preguntas de todas las categorías
+    todas_preguntas = []
+    for categoria, preguntas in PREGUNTAS_TRIVIA.items():
+        for pregunta in preguntas:
+            pregunta_con_categoria = pregunta.copy()
+            pregunta_con_categoria['categoria'] = categoria
+            todas_preguntas.append(pregunta_con_categoria)
+    
+    return random.choice(todas_preguntas)
+
+def calcular_puntos_gamificacion(voto_data, respuesta_trivia=None):
+    """Calcula puntos gamificados basados en votación + trivia educativa"""
     puntos = 0
+    
+    # ✅ PUNTOS BASE por completar votación
+    puntos += 50  # Puntos base más altos
+    
+    # ✅ PUNTOS por diversidad en calificaciones (premiar pensamiento crítico)
     ratings = voto_data.get('ratings', {})
-    
-    # Puntos base por votar
-    puntos += 10
-    
-    # Puntos por diversidad en las calificaciones
     if ratings:
         valores_unicos = len(set(ratings.values()))
-        puntos += valores_unicos * 2  # 2 puntos por cada valor diferente usado
-        
-        # Bonus por usar el rango completo (1-5)
-        if len(set(ratings.values())) >= 4:
-            puntos += 5
+        if valores_unicos >= 4:  # Usó al menos 4 valores diferentes
+            puntos += 20  # Bonus por evaluación diversa
+        elif valores_unicos >= 3:
+            puntos += 10
     
-    # Puntos por participación temprana
-    from datetime import datetime
-    fecha_voto = datetime.fromisoformat(voto_data.get('fecha', datetime.now().isoformat()))
-    hora_voto = fecha_voto.hour
+    # ✅ PUNTOS TRIVIA - Lo más importante ahora
+    if respuesta_trivia:
+        if respuesta_trivia.get('correcta', False):
+            pregunta_puntos = respuesta_trivia.get('puntos_pregunta', 10)
+            puntos += pregunta_puntos  # Puntos de la pregunta específica
+            
+            # Bonus por categoría difícil
+            categoria = respuesta_trivia.get('categoria', '')
+            if categoria in ['historia_cordoba', 'matematicas']:
+                puntos += 5  # Bonus por categorías más desafiantes
+        else:
+            puntos += 2  # Puntos de consolación por intentar
     
-    if 8 <= hora_voto <= 12:  # Mañana
-        puntos += 3
-    elif 13 <= hora_voto <= 17:  # Tarde
-        puntos += 2
+    # ✅ BONUS por buen comportamiento social
+    bloqueado = voto_data.get('bloqueado')
+    if not bloqueado:  # No bloqueó a nadie
+        puntos += 5  # Bonus por convivencia positiva
     
     return puntos
 
-def actualizar_ranking_clase(anio, alumno, puntos):
-    """Actualiza el ranking gamificado de la clase"""
-    ranking_archivo = f"ranking_{anio}.json"
-    ranking = cargar_json_seguro(ranking_archivo)
+def actualizar_ranking_clase(anio, alumno, puntos, datos_trivia=None):
+    """Actualiza el ranking usando la base de datos"""
+    from datetime import datetime
     
-    if alumno not in ranking:
-        ranking[alumno] = {
-            'puntos_totales': 0,
-            'nivel': 1,
-            'badges': [],
-            'fecha_ultimo_voto': None
-        }
+    # Obtener datos actuales del alumno desde la base de datos
+    ranking_alumno = db_manager.obtener_ranking_alumno(anio, alumno)
     
     # Actualizar puntos
-    ranking[alumno]['puntos_totales'] += puntos
-    ranking[alumno]['fecha_ultimo_voto'] = datetime.now().isoformat()
+    ranking_alumno['puntos_totales'] += puntos
+    ranking_alumno['fecha_ultimo_voto'] = datetime.now().isoformat()
     
-    # Calcular nivel basado en puntos
-    puntos_totales = ranking[alumno]['puntos_totales']
-    nuevo_nivel = min(10, (puntos_totales // 50) + 1)  # Nivel cada 50 puntos, máximo 10
+    # ✅ ACTUALIZAR estadísticas de trivia
+    if datos_trivia:
+        stats = ranking_alumno['trivia_stats']
+        stats['preguntas_respondidas'] += 1
+        
+        if datos_trivia.get('correcta', False):
+            stats['preguntas_correctas'] += 1
+            stats['racha_actual'] += 1
+            stats['mejor_racha'] = max(stats['mejor_racha'], stats['racha_actual'])
+            
+            # Agregar categoría dominada
+            categoria = datos_trivia.get('categoria', '')
+            if categoria not in stats['categorias_dominadas']:
+                stats['categorias_dominadas'].append(categoria)
+        else:
+            stats['racha_actual'] = 0
     
-    if nuevo_nivel > ranking[alumno]['nivel']:
-        ranking[alumno]['nivel'] = nuevo_nivel
+    # Calcular nivel basado en puntos (más generoso)
+    puntos_totales = ranking_alumno['puntos_totales']
+    nuevo_nivel = min(20, (puntos_totales // 100) + 1)  # Nivel cada 100 puntos, máximo 20
+    
+    if nuevo_nivel > ranking_alumno['nivel']:
+        ranking_alumno['nivel'] = nuevo_nivel
         # Otorgar badge por subir nivel
-        ranking[alumno]['badges'].append(f"Nivel {nuevo_nivel}")
+        ranking_alumno['badges'].append(f"🎓 Nivel {nuevo_nivel}")
     
-    # Guardar ranking
-    guardar_json_seguro(ranking_archivo, ranking)
+    # Guardar en la base de datos
+    exito = db_manager.actualizar_ranking_completo(anio, alumno, ranking_alumno)
     
-    return ranking[alumno]
+    if not exito:
+        print(f"⚠️ Error guardando ranking para {alumno} en {anio}")
+    
+    return ranking_alumno
 
-def otorgar_badges(alumno_stats, votos_anio):
-    """Otorga badges especiales basados en comportamiento"""
+def otorgar_badges_trivia(alumno_stats, datos_trivia):
+    """Otorga badges basados en desempeño en trivia"""
     badges_nuevos = []
     
-    # Badge "Votante Temprano" - primeros 5 en votar
-    if len(votos_anio) <= 5:
-        badges_nuevos.append("🥇 Votante Temprano")
+    if not datos_trivia:
+        return badges_nuevos
+        
+    trivia_stats = alumno_stats.get('trivia_stats', {})
     
-    # Badge "Evaluador Justo" - uso equilibrado de puntuaciones
-    # Badge "Líder Social" - puntuaciones altas recibidas
-    # etc.
+    # Badge por primera respuesta correcta
+    if trivia_stats.get('preguntas_correctas', 0) == 1:
+        badges_nuevos.append("🌟 Primer Acierto")
+    
+    # Badge por racha de respuestas correctas
+    racha_actual = trivia_stats.get('racha_actual', 0)
+    if racha_actual == 3:
+        badges_nuevos.append("🔥 Racha x3")
+    elif racha_actual == 5:
+        badges_nuevos.append("🏆 Racha x5")
+    elif racha_actual >= 10:
+        badges_nuevos.append("👑 Súper Racha!")
+    
+    # Badge por dominar categorías
+    categorias = trivia_stats.get('categorias_dominadas', [])
+    if len(categorias) >= 3:
+        badges_nuevos.append("🎯 Conocimiento Diverso")
+    if len(categorias) >= 5:
+        badges_nuevos.append("🧠 Erudito")
+    
+    # Badge por categorías específicas
+    if datos_trivia.get('correcta', False):
+        categoria = datos_trivia.get('categoria', '')
+        if categoria == 'historia_cordoba':
+            badges_nuevos.append("🏛️ Historiador Cordobés")
+        elif categoria == 'matematicas':
+            badges_nuevos.append("🔢 Matemático")
+        elif categoria == 'geografia_cordoba':
+            badges_nuevos.append("🗺️ Explorador Provincial")
+    
+    # Badge por excelencia académica
+    correctas = trivia_stats.get('preguntas_correctas', 0)
+    total = trivia_stats.get('preguntas_respondidas', 1)
+    if total >= 5 and (correctas / total) >= 0.8:
+        badges_nuevos.append("⭐ Excelencia Académica")
     
     return badges_nuevos
 # 3. TERCERO: AHORA SÍ cargar usuarios adicionales
@@ -157,103 +337,15 @@ def role_required(*roles):
         return decorated_function
     return decorator
 
-# Diccionario de alumnos por año
-alumnos_por_anio = {
-    'primero': [
-        "ISABELLA ALBERIONE FIORE", "BENJAMIN MATIAS ALDAVE", "MALENA ARMADA",
-        "MIA BALDONCINI", "FRANCESCO BALEANI", "OCTAVIO BARRIONUEVO SORIA",
-        "BENJAMIN ALEXIS BELTRAMO", "LAUTARO OMAR BONO", "MIA CASTRO",
-        "CATALINA CICCIOLI", "ALAN DIDIER", "ISABELLA FALCONNAT",
-        "AXEL ARIEL FERREYRA", "LUCIA INES FRANCO", "GENARO ZACARÍAS FRARESSO",
-        "JUSTINO FRARESSO ZORRILLA", "CATALINA GALETTO GALVAN", "FELIPE LOZANO DE FRANCISCO",
-        "LAZARO MARINSALDA SONTULLO", "IGNACIO MELANO", "MATEO MERCADO BOTTOSSO",
-        "OLIVIA JAZMIN MONTE", "ANGELINA NICOLE MOYANO CARBAJAL", "GIULIANA OLDANI",
-        "JULIANA PEROGLIA PAINA", "EZEQUIEL FEDERICO PERREN", "FERMIN RAMONDA ROSAS",
-        "LOURDES RE", "BIANCA SOFIA RE OLIVERA", "VICTORIA SCARAMUZZA MATTIA",
-        "VICTORIA TANTUCCI VIANO", "VALENTINO TAPIA CERQUATTI", "ISABELLA VEGA AHUMADA",
-        "LARA VENTRE", "RINGO JAVIER ZUPPA"
-    ],
-    'segundo': [
-        "SANTINO CERUTTI", "HELENA CLARK ETCHEVERRY", "BENJAMIN CRESATTI MIÑO",
-        "EMILIA FALCO GARINO", "FRANCISCO FERRERO FONSECA", "MIA GABRIELA GARCIA",
-        "HELENA MANSILLA", "FELIPE RE", "MARTIN ANGEL ROSINA",
-        "MARTINIANO SORIANO PRANZONI", "MELANY TORRESI", "JOAQUIN BAUTISTA VERDICCHIO"
-    ],
-    'tercero': [
-        "SANTIAGO BALDONCINI", "LUCIA BERTEA CASAGRANDE", "ZAIRA BIANI",
-        "BENJAMIN CABANILLAS MONNIER", "BIANCA DE LOURDES CAMPANA", "EUGENIA GUADALUPE CAROLINI CIRIACI",
-        "JOAQUIN CASTELLINA", "MARTINA CEJAS FONT", "VALENTINA CINGOLANI",
-        "MATEO CORNEJO", "CATALINA DI GREGORIO MARINSALDA", "CRISTOBAL ELLENA CITTADINI",
-        "JAZMIN FODDANU", "GUADALUPE FOLLONIER OLDANI", "MATEO ANGEL FRANCO",
-        "AGUSTIN NICOLAS GAIDO", "LORENZO GALETTO GALVAN", "ISABELLA GASPARINI",
-        "JAZMIN GIOTTO", "CATALINA GOMEZ", "RAMIRO JOAQUIN LOVERA",
-        "BRIANA ELIZABETH LUQUE", "SANTIAGO ARIEL MANDILE", "LORENZO MASSEI",
-        "SOFIA NUÑEZ", "AGUSTINA OCHETTI", "AGUSTINA OLDANI",
-        "MERCEDES LUJAN OLMOS", "IGNACIO FEDERICO PERREN", "FRANCESCA PESANDO",
-        "AGOSTINA RODRIGUEZ RE", "RENATA ROPOLO", "FAUSTINA SCARAMUZZA",
-        "SANTIAGO ANDRES SONZINI FINELLI", "SOLANGE TISSERA", "MAXIMO TORRES FORTINI",
-        "SOFIA VALENTINA VECCHIO FERNANDEZ", "DANTE VILLARREAL BALDONCINI", "ALMA MORENA LOURDES ZUPPA"
-    ],
-    'cuarto': [
-        "RENATA BARBERO MARTINEZ", "MARTIN JESUS BELTRAMO", "ARANZA BONFIGLI",
-        "TOMAS CAMILETTI", "JUANA CAMPODONICO FALCO", "SANTINO CAMPODÓNICO SALIBI",
-        "PAULINA BERENICE CASTELLANO BECK", "ATILIO FERREYRA FRARESSO", "AUGUSTO FUENTES",
-        "LARA HERNANDEZ", "THIAGO BAUTISTA INAMORATO MOYANO", "FELIPE LIBRA",
-        "BAUTISTA LOPEZ CALCATERRA", "ANALUZ MALDONADO MENDEZ", "LUCERO MIA MARINSALDA SONTULLO",
-        "UMMA MILLER LUPIDI", "DELFINA MURIÑO", "JUAN CRUZ OLIVA",
-        "FELIPE LUCIANO PICCA", "SOFIA ROSAS", "VALENTIN ROSSI",
-        "FRANCESCO SCARAMUZZA", "FRANCO SCARAMUZZA MATTIA", "CATALINA TANTUCCI BERTOTTO",
-        "FRANCISCO TANTUCCI VIANO", "BAUTISTA TULIAN", "MAXIMO JOSE ZUPPA"
-    ],
-    'quinto': [
-        "PALOMA AIMAR", "JULIANA BELTRAMO", "VALENTINA MORENA BRAGAYOLI PINO",
-        "JOAQUINA BRAVO GARNERO", "AUGUSTO NICOLA CERUTTI", "NICOLAS CICCIOLI",
-        "BAUTISTA CORDOBA GONZALEZ", "GENARO LEONEL ESQUIVEL", "JOAQUIN FERNANDEZ",
-        "CANDELA FERNANDEZ VENTRE", "RAMIRO FRARESSO", "AARON LUCIANO GALVAN CORDOBA",
-        "MELODY LUZ GOMEZ", "JULIAN GUZMAN BAIADERA", "DANTE LIBRA",
-        "PAULINA MANZOTTI", "ANA PAULA MARIN", "NAHUEL BENJAMIN MARINSALDA MASSOLA",
-        "DANILO MARTINANGELO", "JULIETA MERCADO BOTTOSSO", "ANA PAULA MONTE",
-        "FELIPE OLAIZ", "VICTORIA OLDANI", "MARIA DEL ROSARIO OLMOS",
-        "ANA CELINA OSTORERO", "MIA PERALTA", "VALENTIN RAMONDA ROSAS",
-        "LUCIA BELEN RE OLIVERA", "VALENTINO ROPOLO", "MARTINA TORRES VAZQUEZ"
-    ],
-    'sexto': [
-        "GUADALUPE AIMAR", "JUAN CRUZ ANTONELLO VEGA", "SANTINO ARNOLETTO FERRERO",
-        "ANA PAULA BALDONCINI", "LOLA DE LOURDES BLANGINO", "VICTORIA LUZ BORTOLINI",
-        "BAUTISTA BROMBIN BENEDETTI", "FERNANDO CACERES", "IGNACIO DANIEL CAMPANA",
-        "DELFINA DAFNE CARBAJAL", "ALMA CAROLINI", "CHIARA COMBA GALVAGNO",
-        "LOURDES CRISTALLI", "RAMIRO CRISTALLI", "SEBASTIAN DAVICO FLAUMER",
-        "CHIARA DUARTE CUEVA", "JUAN CRUZ FANTONI", "LUCÍA MARÍA FRARESSO",
-        "VICTORIA FRARESSO", "LORENZO MALIZIA MACAGNO", "AZUL MORENA MATTIA",
-        "EMILIA MURATURE", "JUANITA MUÑOZ VERDICCHIO", "LUCIA SCHERMA MARCHEGIANI",
-        "CATALINA VICENTE SORIA", "SANTIAGO VILLARREAL", "MAGALI WALKER",
-        "MARTINA BELÉN ZORRILLA", "LOURDES PAULINA ZUPPA"
-    ]
-}
+# Obtener alumnos desde el gestor modularizado
+alumnos_por_anio = obtener_alumnos_por_anio()
 
-def cargar_json_seguro(archivo):
-    """Función helper para cargar archivos JSON de forma segura"""
-    if os.path.exists(archivo):
-        try:
-            with open(archivo, encoding='utf-8') as f:
-                content = f.read().strip()
-                if content:
-                    return json.loads(content)
-                else:
-                    return {}
-        except (json.JSONDecodeError, FileNotFoundError):
-            return {}
-    return {}
-
-def guardar_json_seguro(archivo, datos):
-    """Función helper para guardar archivos JSON de forma segura"""
-    try:
-        with open(archivo, 'w', encoding='utf-8') as f:
-            json.dump(datos, f, ensure_ascii=False, indent=2)
-        return True
-    except Exception as e:
-        print(f"Error guardando {archivo}: {e}")
-        return False
+def get_alumnos_actuales():
+    """
+    ✅ FUNCIÓN AUXILIAR: Obtiene los datos actuales de alumnos
+    Esta función asegura que siempre trabajemos con datos frescos del archivo
+    """
+    return obtener_alumnos_por_anio()
 
 def generar_asignaciones_por_anio():
     """Genera asignaciones de 5 compañeros por alumno (sin repetir al mismo)"""
@@ -321,38 +413,49 @@ def logout():
 @login_required
 def home():
     anio = request.args.get('anio', '')
-    alumnos = alumnos_por_anio.get(anio, [])
     
-    votos_archivo = f"votos_{anio}.json" if anio else "votos.json"
-    votos = cargar_json_seguro(votos_archivo)
+    # ✅ CORREGIDO: Usar función que lee archivo actual
+    alumnos_actuales = obtener_alumnos_por_anio()
+    alumnos = alumnos_actuales.get(anio, [])
     
-    ya_votaron = set(votos.keys())
+    # Obtener votos desde la base de datos
+    votos_bd = db_manager.obtener_votos_por_anio(anio) if anio else {}
+    ya_votaron = set(votos_bd.keys())
+    
     return render_template("home.html", 
                          alumnos=alumnos, 
                          ya_votaron=ya_votaron, 
                          anio=anio, 
-                         alumnos_por_anio=alumnos_por_anio,
+                         alumnos_por_anio=alumnos_actuales,  # ✅ También corregido aquí
                          usuario=session.get('usuario'),
                          rol=session.get('rol'))
 
 @app.route('/votar/<anio>/<nombre>', methods=['GET', 'POST'])
 @login_required
 def votar(anio, nombre):
-    # Verificar que el alumno pertenece al año
-    alumnos = alumnos_por_anio.get(anio, [])
+    # ✅ CORREGIDO: Usar función que lee archivo actual
+    alumnos_actuales = obtener_alumnos_por_anio()
+    alumnos = alumnos_actuales.get(anio, [])
+    
     if nombre not in alumnos:
         flash('Alumno no encontrado en este año', 'error')
         return redirect(url_for('home', anio=anio))
     
-    # Cargar votos existentes
-    archivo_votos = f'votos_{anio}.json'
-    votos = cargar_json_seguro(archivo_votos)
+    # Cargar votos existentes desde la base de datos
+    votos_bd = db_manager.obtener_votos_por_anio(anio)
     
     if request.method == 'GET':
         # Verificar si ya votó
-        if nombre in votos:
+        if nombre in votos_bd:
             flash('Ya has completado tu votación', 'info')
             return redirect(url_for('home', anio=anio))
+        
+        # ✅ VERIFICAR si la trivia es obligatoria antes de mostrarla
+        config_aula = db_manager.cargar_configuracion_aula()
+        trivia_obligatoria = config_aula.get('trivia_obligatoria', True)
+        
+        if trivia_obligatoria and not session.get(f'trivia_completada_{anio}_{nombre}', False):
+            return redirect(url_for('trivia_educativa', anio=anio, nombre=nombre))
         
         # Obtener otros alumnos (excluir al que está votando)
         otros_alumnos = [a for a in alumnos if a != nombre]
@@ -423,26 +526,118 @@ def votar(anio, nombre):
     # ✅ GAMIFICACIÓN: Calcular puntos
     puntos_obtenidos = calcular_puntos_gamificacion(voto_data)
     voto_data['puntos_obtenidos'] = puntos_obtenidos
-
-    # Guardar en el archivo de votos
-    votos = cargar_json_seguro(archivo_votos)
-    votos[nombre] = voto_data
-    guardar_json_seguro(archivo_votos, votos)
-
-    # ✅ GAMIFICACIÓN: Actualizar ranking y badges
-    alumno_stats = actualizar_ranking_clase(anio, nombre, puntos_obtenidos)
-    badges_nuevos = otorgar_badges(alumno_stats, votos)
-
+    
+    # 🔥 CORREGIDO: GUARDAR EL VOTO EN LA BASE DE DATOS
+    exito_guardado = db_manager.guardar_voto(
+        anio=anio,
+        alumno=nombre,
+        calificaciones=ratings,
+        alumno_bloqueado=bloqueado,
+        timestamp=voto_data['fecha']
+    )
+    
+    if not exito_guardado:
+        flash('❌ Error al guardar el voto en la base de datos', 'error')
+        return redirect(url_for('votar', anio=anio, nombre=nombre))
+    
+    # Obtener datos de trivia de la sesión
+    datos_trivia = session.get(f'resultado_trivia_{anio}_{nombre}')
+    
+    # ✅ GAMIFICACIÓN: Actualizar ranking con trivia
+    alumno_stats = actualizar_ranking_clase(anio, nombre, puntos_obtenidos, datos_trivia)
+    badges_nuevos = otorgar_badges_trivia(alumno_stats, datos_trivia)
+    
     # Limpiar la sesión
     session.pop(f'alumnos_evaluar_{anio}_{nombre}', None)
-
-    # ✅ GAMIFICACIÓN: Flash message con puntos
-    flash(f'¡Votación registrada! 🎉 Ganaste {puntos_obtenidos} puntos. Nivel actual: {alumno_stats["nivel"]}', 'success')
-
+    session.pop(f'trivia_completada_{anio}_{nombre}', None)
+    session.pop(f'resultado_trivia_{anio}_{nombre}', None)
+    
+    # ✅ GAMIFICACIÓN: Flash message mejorado
+    mensaje_puntos = f'¡Votación registrada! 🎉 Ganaste {puntos_obtenidos} puntos.'
+    if datos_trivia and datos_trivia.get('correcta'):
+        mensaje_puntos += f' 🧠 ¡Trivia correcta: +{datos_trivia.get("puntos_pregunta", 0)} puntos!'
+    mensaje_puntos += f' Nivel actual: {alumno_stats["nivel"]}'
+    
+    flash(mensaje_puntos, 'success')
+    
     if badges_nuevos:
-        flash(f'¡Nuevos badges obtenidos: {", ".join(badges_nuevos)}! 🏆', 'info')
-
+        flash(f'¡Nuevos logros: {", ".join(badges_nuevos)}! 🏆', 'info')
+    
     return redirect(url_for('home', anio=anio))
+
+@app.route('/trivia_educativa/<anio>/<nombre>', methods=['GET', 'POST'])
+@login_required
+def trivia_educativa(anio, nombre):
+    """Trivia educativa antes de votar"""
+    # ✅ CORREGIDO: Usar función que lee archivo actual
+    alumnos_actuales = obtener_alumnos_por_anio()
+    alumnos = alumnos_actuales.get(anio, [])
+    
+    if nombre not in alumnos:
+        flash('Alumno no encontrado', 'error')
+        return redirect(url_for('home', anio=anio))
+    
+    if request.method == 'GET':
+        # Generar pregunta aleatoria
+        pregunta = obtener_pregunta_aleatoria()
+        pregunta_id = hash(pregunta['pregunta']) % 10000  # ID único para la pregunta
+        
+        # Guardar pregunta en sesión
+        session[f'pregunta_actual_{anio}_{nombre}'] = {
+            'pregunta': pregunta,
+            'pregunta_id': pregunta_id,
+            'inicio_tiempo': datetime.now().isoformat()
+        }
+        
+        return render_template('trivia.html', 
+                             nombre=nombre, 
+                             anio=anio, 
+                             pregunta=pregunta,
+                             pregunta_id=pregunta_id)
+    
+    # POST - procesar respuesta de trivia
+    pregunta_data = session.get(f'pregunta_actual_{anio}_{nombre}')
+    if not pregunta_data:
+        flash('Error en la sesión de trivia', 'error')
+        return redirect(url_for('trivia_educativa', anio=anio, nombre=nombre))
+    
+    pregunta = pregunta_data['pregunta']
+    respuesta_alumno = request.form.get('respuesta')
+    
+    # Evaluar respuesta
+    es_correcta = False
+    puntos_ganados = 0
+    
+    if respuesta_alumno is not None:
+        respuesta_int = int(respuesta_alumno)
+        es_correcta = respuesta_int == pregunta['respuesta_correcta']
+        
+        if es_correcta:
+            puntos_ganados = pregunta['puntos']
+        else:
+            puntos_ganados = 2  # Puntos de consolación
+    
+    # Guardar resultado en sesión
+    resultado_trivia = {
+        'correcta': es_correcta,
+        'puntos_pregunta': pregunta['puntos'],
+        'puntos_ganados': puntos_ganados,
+        'categoria': pregunta.get('categoria', ''),
+        'pregunta_texto': pregunta['pregunta'],
+        'respuesta_correcta': pregunta['opciones'][pregunta['respuesta_correcta']]
+    }
+    
+    session[f'resultado_trivia_{anio}_{nombre}'] = resultado_trivia
+    session[f'trivia_completada_{anio}_{nombre}'] = True
+    
+    # Limpiar pregunta actual
+    session.pop(f'pregunta_actual_{anio}_{nombre}', None)
+    
+    # Mostrar resultado y continuar
+    flash(f'{"¡Correcto!" if es_correcta else "Incorrecto"} Ganaste {puntos_ganados} puntos.', 
+          'success' if es_correcta else 'warning')
+    
+    return redirect(url_for('votar', anio=anio, nombre=nombre))
 
 @app.route("/procesar_voto", methods=["POST"])
 @login_required
@@ -451,7 +646,9 @@ def procesar_voto():
     anio = request.form.get('anio')
     
     try:
-        if not anio or anio not in alumnos_por_anio:
+        # ✅ CORREGIDO: Usar datos actuales
+        alumnos_actuales = get_alumnos_actuales()
+        if not anio or anio not in alumnos_actuales:
             flash("Año no válido", "error")
             return redirect(url_for('home'))
         
@@ -462,11 +659,10 @@ def procesar_voto():
             flash("No se encontraron opciones para este alumno", "error")
             return redirect(url_for('home', anio=anio))
         
-        # Verificar si ya votó
-        votos_archivo = f"votos_{anio}.json"
-        votos = cargar_json_seguro(votos_archivo)
+        # Verificar si ya votó (desde base de datos)
+        votos_bd = db_manager.obtener_votos_por_anio(anio)
         
-        if nombre in votos:
+        if nombre in votos_bd:
             flash(f"{nombre} ya ha votado", "warning")
             return redirect(url_for('home', anio=anio))
         
@@ -499,19 +695,22 @@ def procesar_voto():
             flash("Solo puedes bloquear a uno de los compañeros que calificaste", "error")
             return redirect(url_for('votar', nombre=nombre, anio=anio))
         
-        # Guardar voto
-        voto_data = {
-            'calificaciones': calificaciones,
-            'bloqueado': alumno_bloqueado if alumno_bloqueado else None,
-            'timestamp': str(os.times().elapsed)
-        }
+        # Guardar voto usando base de datos
+        timestamp_actual = str(os.times().elapsed)
         
-        votos[nombre] = voto_data
+        # Guardar en base de datos
+        db_success = db_manager.guardar_voto(
+            anio=anio,
+            alumno=nombre, 
+            calificaciones=calificaciones,
+            alumno_bloqueado=alumno_bloqueado,
+            timestamp=timestamp_actual
+        )
         
-        if guardar_json_seguro(votos_archivo, votos):
+        if db_success:
             flash(f"✅ Voto de {nombre} registrado exitosamente!", "success")
         else:
-            flash("Error al guardar el voto", "error")
+            flash("❌ Error al guardar el voto", "error")
             
         return redirect(url_for("home", anio=anio))
         
@@ -525,18 +724,21 @@ def procesar_voto():
 def resultados():
     anio = request.args.get('anio', '')
     
-    if not anio or anio not in alumnos_por_anio:
+    # ✅ CORREGIDO: Usar datos actuales
+    alumnos_actuales = get_alumnos_actuales()
+    if not anio or anio not in alumnos_actuales:
         flash("Año no válido", "error")
         return redirect(url_for('home'))
     
-    votos_archivo = f"votos_{anio}.json"
-    votos = cargar_json_seguro(votos_archivo)
+    # Cargar votos desde base de datos
+    votos = db_manager.obtener_votos_por_anio(anio)
     
     if not votos:
         flash("No hay votos registrados para mostrar resultados", "warning")
         return redirect(url_for('home', anio=anio))
     
-    emparejamientos = generar_emparejamientos(votos, alumnos_por_anio[anio])
+    # ✅ CORREGIDO: Usar datos actuales
+    emparejamientos = generar_emparejamientos(votos, alumnos_actuales[anio])
     
     # ✅ AGREGAR: Generar pares para bancos
     pares_para_bancos = []
@@ -582,15 +784,15 @@ def asignacion_bancos():
     
     # Si se solicita cargar guardado
     if cargar_guardado:
-        bancos_archivo = f"bancos_{anio}.json"
-        bancos_data = cargar_json_seguro(bancos_archivo)
+        # Cargar desde base de datos
+        bancos_data = db_manager.cargar_asignacion_bancos(anio)
         
         if bancos_data and 'asignacion' in bancos_data:
             asignacion = bancos_data['asignacion']
             total_alumnos = bancos_data.get('total_alumnos', 0)
             filas = bancos_data.get('configuracion', {}).get('filas', math.ceil(total_alumnos / 6))
             
-            flash(f"Asignación cargada desde archivo guardado", "info")
+            flash(f"Asignación cargada exitosamente", "info")
             
             return render_template("asignacion_bancos.html", 
                                  aula=asignacion,
@@ -695,9 +897,9 @@ def asignacion_bancos():
                     'posicion': ['Izquierda', 'Centro', 'Derecha'][col]
                 })
     
-    # Verificar si hay asignación guardada
-    bancos_archivo = f"bancos_{anio}.json"
-    guardado_disponible = os.path.exists(bancos_archivo)
+    # Verificar si hay asignación guardada en la base de datos
+    asignaciones_guardadas = db_manager.listar_asignaciones_bancos(anio)
+    guardado_disponible = len(asignaciones_guardadas) > 0
     
     return render_template("asignacion_bancos.html", 
                          aula=aula,
@@ -719,9 +921,10 @@ def cargar_bancos(anio):
 @app.route("/guardar_bancos", methods=["POST"])
 @role_required('administrador', 'psicopedagogo')
 def guardar_bancos():
-    """Guarda la asignación actual de bancos"""
+    """Guarda la asignación actual de bancos con nombre personalizado"""
     anio = request.form.get('anio', '')
     asignacion_data = request.form.get('asignacion_data', '')
+    nombre_asignacion = request.form.get('nombre_asignacion', f"Asignación_{datetime.now().strftime('%Y%m%d_%H%M')}")
     
     if not anio or not asignacion_data:
         flash("Datos incompletos para guardar", "error")
@@ -731,23 +934,28 @@ def guardar_bancos():
         import json
         asignacion = json.loads(asignacion_data)
         
-        # Preparar datos para guardar
-        datos_guardar = {
-            'asignacion': asignacion,
-            'fecha_guardado': datetime.now().isoformat(),
-            'total_alumnos': len([banco for banco in asignacion if banco.get('ocupado')]),
-            'configuracion': {
-                'filas': max(banco.get('fila', 1) for banco in asignacion),
-                'columnas': 6
-            }
-        }
+        # Calcular datos de la asignación
+        total_alumnos = len([banco for banco in asignacion if banco.get('ocupado')])
+        filas = max(banco.get('fila', 1) for banco in asignacion)
+        columnas = 6
         
-        # Guardar archivo
-        bancos_archivo = f"bancos_{anio}.json"
-        if guardar_json_seguro(bancos_archivo, datos_guardar):
-            flash("✅ Asignación de bancos guardada exitosamente", "success")
+        # Guardar en base de datos
+        db_success = db_manager.guardar_asignacion_bancos(
+            anio=anio,
+            nombre_asignacion=nombre_asignacion,
+            asignacion_data=asignacion,
+            total_alumnos=total_alumnos,
+            filas=filas,
+            columnas=columnas,
+            es_actual=True
+        )
+        
+        if db_success:
+            flash(f"✅ Asignación '{nombre_asignacion}' guardada exitosamente", "success")
+            print(f"✅ Asignación '{nombre_asignacion}' guardada en BD para {anio}")
         else:
-            flash("❌ Error al guardar la asignación", "error")
+            flash("❌ Error al guardar la asignación en la base de datos", "error")
+            print(f"❌ Error guardando asignación '{nombre_asignacion}' en BD para {anio}")
             
     except Exception as e:
         print(f"Error guardando bancos: {e}")
@@ -755,12 +963,145 @@ def guardar_bancos():
     
     return redirect(url_for('asignacion_bancos', anio=anio))
 
+@app.route("/listar_asignaciones/<anio>")
+@role_required('administrador', 'psicopedagogo')
+def listar_asignaciones(anio):
+    """Lista todas las asignaciones guardadas para un año"""
+    try:
+        asignaciones = db_manager.listar_asignaciones_bancos(anio)
+        return {
+            'success': True,
+            'asignaciones': asignaciones
+        }
+    except Exception as e:
+        print(f"Error listando asignaciones: {e}")
+        return {
+            'success': False,
+            'error': 'Error al cargar asignaciones'
+        }
+
+@app.route("/cargar_asignacion", methods=['POST'])
+@role_required('administrador', 'psicopedagogo')
+def cargar_asignacion():
+    """Carga una asignación específica"""
+    anio = request.form.get('anio', '')
+    nombre_asignacion = request.form.get('nombre_asignacion', '')
+    
+    if not anio or not nombre_asignacion:
+        flash("Datos incompletos para cargar asignación", "error")
+        return redirect(url_for('home'))
+    
+    try:
+        # Cargar desde base de datos
+        asignacion_data = db_manager.cargar_asignacion_bancos(anio, nombre_asignacion)
+        
+        if not asignacion_data:
+            flash(f"No se encontró la asignación '{nombre_asignacion}'", "error")
+            return redirect(url_for('asignacion_bancos', anio=anio))
+        
+        # Marcar como actual en base de datos
+        db_manager.guardar_asignacion_bancos(
+            anio=anio,
+            nombre_asignacion=nombre_asignacion,
+            asignacion_data=asignacion_data['asignacion'],
+            total_alumnos=asignacion_data['total_alumnos'],
+            filas=asignacion_data['configuracion']['filas'],
+            columnas=asignacion_data['configuracion']['columnas'],
+            es_actual=True
+        )
+        
+        # También actualizar archivo JSON como respaldo
+        bancos_archivo = f"bancos_{anio}.json"
+        guardar_json_seguro(bancos_archivo, asignacion_data)
+        
+        flash(f"✅ Asignación '{nombre_asignacion}' cargada exitosamente", "success")
+        
+    except Exception as e:
+        print(f"Error cargando asignación: {e}")
+        flash("❌ Error al cargar la asignación", "error")
+    
+    return redirect(url_for('asignacion_bancos', anio=anio))
+
+@app.route("/auto_guardar_tras_votacion", methods=['POST'])
+@role_required('administrador', 'psicopedagogo')
+def auto_guardar_tras_votacion():
+    """Guarda automáticamente la asignación después de completar votaciones"""
+    anio = request.form.get('anio', '')
+    
+    if not anio:
+        return {'success': False, 'error': 'Año no especificado'}
+    
+    try:
+        # Verificar que haya votos suficientes
+        votos = db_manager.cargar_votos(anio)
+        if not votos:
+            votos = cargar_json_seguro(f"votos_{anio}.json")
+        
+        if len(votos) < 2:  # Mínimo 2 votos para generar asignación
+            return {'success': False, 'error': 'Votos insuficientes'}
+        
+        # Generar asignación automática
+        emparejamientos = generar_emparejamientos(votos, alumnos_por_anio[anio])
+        
+        # Crear configuración básica de bancos
+        config_actual = db_manager.cargar_configuracion_aula()
+        filas = config_actual.get('filas', 6)
+        columnas = config_actual.get('columnas', 6)
+        
+        # Simular asignación básica (esto se puede mejorar con lógica específica)
+        asignacion = []
+        for fila in range(1, filas + 1):
+            for col in range(1, columnas + 1):
+                asignacion.append({
+                    'fila': fila,
+                    'columna': col,
+                    'ocupado': False,
+                    'alumno': None
+                })
+        
+        # Asignar alumnos según emparejamientos
+        banco_index = 0
+        for pareja in emparejamientos:
+            if banco_index < len(asignacion) - 1:  # Asegurar que hay espacio
+                asignacion[banco_index].update({
+                    'ocupado': True,
+                    'alumno': pareja[0]
+                })
+                asignacion[banco_index + 1].update({
+                    'ocupado': True,
+                    'alumno': pareja[1]
+                })
+                banco_index += 2
+        
+        # Guardar con nombre automático
+        nombre_auto = f"Auto_Post_Votacion_{datetime.now().strftime('%Y%m%d_%H%M')}"
+        total_alumnos = len([b for b in asignacion if b.get('ocupado')])
+        
+        success = db_manager.guardar_asignacion_bancos(
+            anio=anio,
+            nombre_asignacion=nombre_auto,
+            asignacion_data=asignacion,
+            total_alumnos=total_alumnos,
+            filas=filas,
+            columnas=columnas,
+            es_actual=True
+        )
+        
+        if success:
+            return {'success': True, 'nombre': nombre_auto}
+        else:
+            return {'success': False, 'error': 'Error al guardar'}
+            
+    except Exception as e:
+        print(f"Error en auto-guardado: {e}")
+        return {'success': False, 'error': str(e)}
+
 @app.route("/exportar_bancos/<anio>")
 @role_required('administrador', 'psicopedagogo')
 def exportar_bancos(anio):
-    """Exporta la asignación de bancos a Excel"""
-    bancos_archivo = f"bancos_{anio}.json"
-    bancos_data = cargar_json_seguro(bancos_archivo)
+    """Exporta la asignación de bancos a Excel desde la base de datos"""
+    # Obtener la asignación actual desde la base de datos
+    bancos_data = db_manager.cargar_asignacion_bancos(anio)
     
     if not bancos_data or 'asignacion' not in bancos_data:
         flash("No hay asignación de bancos para exportar", "warning")
@@ -807,29 +1148,27 @@ def exportar_bancos(anio):
 @app.route("/historial_bancos/<anio>")
 @role_required('administrador', 'psicopedagogo')
 def historial_bancos(anio):
-    """Muestra el historial de asignaciones de bancos"""
+    """Muestra el historial de asignaciones de bancos desde la base de datos"""
     if anio not in alumnos_por_anio:
         flash("Año no válido", "error")
         return redirect(url_for('home'))
     
-    # Buscar todos los archivos de backup
-    import glob
-    pattern = f"bancos_{anio}*.json"
-    archivos = glob.glob(pattern)
+    # Obtener historial desde la base de datos
+    historial_bd = db_manager.listar_asignaciones_bancos(anio)
     
     historial = []
-    for archivo in archivos:
-        data = cargar_json_seguro(archivo)
-        if data:
-            historial.append({
-                'archivo': archivo,
-                'fecha': data.get('fecha_creacion', 'N/A'),
-                'usuario': data.get('usuario_creador', 'N/A'),
-                'total_alumnos': data.get('total_alumnos', 0)
-            })
+    for asignacion in historial_bd:
+        historial.append({
+            'id': asignacion.get('id'),
+            'nombre': asignacion.get('nombre_asignacion', 'Sin nombre'),
+            'fecha': asignacion.get('fecha_creacion', 'N/A'),
+            'total_alumnos': asignacion.get('total_alumnos', 0),
+            'filas': asignacion.get('filas', 'N/A'),
+            'columnas': asignacion.get('columnas', 'N/A'),
+            'es_actual': asignacion.get('es_actual', False)
+        })
     
-    # Ordenar por fecha (más reciente primero)
-    historial.sort(key=lambda x: x['fecha'], reverse=True)
+    # Ya viene ordenado por fecha desde la BD (más reciente primero)
     
     return render_template("historial_bancos.html",
                          anio=anio,
@@ -846,17 +1185,18 @@ def configuracion_aula():
             'columnas_por_fila': int(request.form.get('columnas', 6)),
             'espacios_libres': request.form.getlist('espacios_libres'),
             'configuracion_especial': request.form.get('especial', False),
+            'trivia_obligatoria': request.form.get('trivia_obligatoria') == 'on',
             'fecha_modificacion': datetime.now().isoformat(),
             'usuario_modificacion': session.get('usuario')
         }
         
-        if guardar_json_seguro('config_aula.json', config):
-            flash("Configuración del aula guardada exitosamente", "success")
-        else:
-            flash("Error al guardar configuración", "error")
+        # Guardar en base de datos
+        db_manager.guardar_configuracion_aula(config)
+        flash("Configuración del aula guardada exitosamente", "success")
+        return redirect(url_for('configuracion_aula'))
     
-    # Cargar configuración actual
-    config_actual = cargar_json_seguro('config_aula.json')
+    # Cargar configuración actual de la base de datos
+    config_actual = db_manager.cargar_configuracion_aula()
     
     return render_template("configuracion_aula.html",
                          config=config_actual)
@@ -984,7 +1324,7 @@ def estadisticas(anio):
 @app.route("/reset_votos_render", methods=["POST"])
 @role_required('administrador')
 def reset_votos_render():
-    """Reset optimizado para Render - Sobrescribe archivos con datos vacíos"""
+    """Reset completo - Archivos JSON Y base de datos"""
     anio = request.form.get('anio', '')
     
     if not anio or anio not in alumnos_por_anio:
@@ -993,38 +1333,65 @@ def reset_votos_render():
     
     try:
         from datetime import datetime
+        import os
         
-        # Lista de archivos a resetear
-        archivos_resetear = {
-            f"votos_{anio}.json": "votos",
-            f"bancos_{anio}.json": "bancos", 
-            f"ranking_{anio}.json": "ranking"
-        }
+        # 1. RESETEAR BASE DE DATOS (Principal)
+        try:
+            # Borrar votos
+            exito_votos, votos_borrados = db_manager.borrar_votos_anio(anio)
+            
+            # Borrar rankings  
+            exito_rankings, rankings_borrados = db_manager.borrar_rankings_anio(anio)
+            
+            # Borrar asignaciones de bancos
+            exito_bancos, bancos_borrados = db_manager.borrar_asignaciones_bancos_anio(anio)
+            
+            # Resultados del reset
+            if exito_votos and exito_rankings and exito_bancos:
+                print(f"✅ Reset DB completo: {votos_borrados} votos, {rankings_borrados} rankings y {bancos_borrados} asignaciones borrados de {anio}")
+                flash(f"✅ Base de datos: {votos_borrados} votos, {rankings_borrados} rankings y {bancos_borrados} asignaciones eliminados", "success")
+            else:
+                # Reporte detallado de qué funcionó y qué no
+                mensajes = []
+                if exito_votos:
+                    mensajes.append(f"{votos_borrados} votos")
+                if exito_rankings:
+                    mensajes.append(f"{rankings_borrados} rankings")  
+                if exito_bancos:
+                    mensajes.append(f"{bancos_borrados} asignaciones")
+                
+                if mensajes:
+                    flash(f"⚠️ Reset parcial: {', '.join(mensajes)} eliminados", "warning")
+                else:
+                    flash(f"❌ Error al borrar datos de la base de datos", "error")
+        except Exception as e:
+            print(f"❌ Error en borrado DB: {e}")
+            flash(f"⚠️ Error en base de datos: {str(e)}", "warning")
         
-        archivos_reseteados = []
+        # 2. LIMPIAR ARCHIVOS JSON EXISTENTES (solo si existen)
+        archivos_limpiar = [
+            f"votos_{anio}.json",
+            f"bancos_{anio}.json", 
+            f"ranking_{anio}.json"
+        ]
         
-        for archivo, tipo in archivos_resetear.items():
+        archivos_limpiados = []
+        
+        for archivo in archivos_limpiar:
             try:
-                # ✅ MÉTODO QUE FUNCIONA EN RENDER: Sobrescribir con datos vacíos
-                datos_vacios = {}
-                
-                # Escribir archivo vacío
-                with open(archivo, 'w', encoding='utf-8') as f:
-                    json.dump(datos_vacios, f, ensure_ascii=False, indent=2)
-                
-                archivos_reseteados.append(tipo)
-                print(f"✅ Reseteado: {archivo}")
-                
+                if os.path.exists(archivo):
+                    os.remove(archivo)
+                    archivos_limpiados.append(archivo)
+                    print(f"🗑️ Eliminado archivo: {archivo}")
             except Exception as e:
-                print(f"❌ Error reseteando {archivo}: {e}")
+                print(f"❌ Error eliminando {archivo}: {e}")
         
-        # Mensaje de éxito
-        if archivos_reseteados:
-            tipos_str = ", ".join(archivos_reseteados)
-            flash(f"✅ Reset exitoso para {anio}: {tipos_str}", "success")
-            flash(f"🔄 Los archivos fueron vaciados correctamente", "info")
+        # Mensaje de éxito final
+        flash(f"✅ Reset completo para {anio}: Base de datos limpiada", "success")
+        if archivos_limpiados:
+            flash(f"�️ Archivos JSON eliminados: {len(archivos_limpiados)}", "info")
         else:
-            flash(f"⚠️ No se pudo resetear ningún archivo para {anio}", "warning")
+            flash(f"ℹ️ No había archivos JSON para limpiar", "info")
             
     except Exception as e:
         error_msg = f"Error en reset: {str(e)}"
@@ -1036,13 +1403,13 @@ def reset_votos_render():
 @app.route("/exportar_votos/<anio>")
 @role_required('administrador', 'psicopedagogo')
 def exportar_votos(anio):
-    """Exporta los votos de un año a Excel"""
+    """Exporta los votos de un año a Excel desde la base de datos"""
     if anio not in alumnos_por_anio:
         flash("Año no válido", "error")
         return redirect(url_for('home'))
     
-    votos_archivo = f"votos_{anio}.json"
-    votos = cargar_json_seguro(votos_archivo)
+    # Obtener votos desde la base de datos
+    votos = db_manager.obtener_votos_por_anio(anio)
     
     if not votos:
         flash("No hay votos para exportar", "warning")
@@ -1052,10 +1419,9 @@ def exportar_votos(anio):
         # Crear datos para Excel
         datos_excel = []
         for votante, datos in votos.items():
-            ratings = datos.get('ratings', {})
-            bloqueado = datos.get('bloqueado', '')
-            fecha = datos.get('fecha', '')
-            ip = datos.get('ip', '')
+            ratings = datos.get('calificaciones', {})
+            bloqueado = datos.get('alumno_bloqueado', '')
+            fecha = datos.get('timestamp', '')
             
             for evaluado, puntuacion in ratings.items():
                 datos_excel.append({
@@ -1063,8 +1429,7 @@ def exportar_votos(anio):
                     'Evaluado': evaluado,
                     'Puntuacion': puntuacion,
                     'Bloqueado_por_Votante': bloqueado,
-                    'Fecha_Voto': fecha[:19] if fecha else '',
-                    'IP_Address': ip
+                    'Fecha_Voto': fecha[:19] if fecha else ''
                 })
         
         # Crear DataFrame
@@ -1192,8 +1557,8 @@ def ranking(anio):
         flash("Año no válido", "error")
         return redirect(url_for('home'))
     
-    ranking_archivo = f"ranking_{anio}.json"
-    ranking_data = cargar_json_seguro(ranking_archivo)
+    # Cargar ranking desde la base de datos
+    ranking_data = db_manager.cargar_ranking(anio)
     
     if not ranking_data:
         flash("Aún no hay datos de ranking para este año", "info")
@@ -1439,6 +1804,7 @@ def verificar_reset(anio):
     if anio not in alumnos_por_anio:
         flash("Año no válido", "error")
         return redirect(url_for('home'))
+
     
     archivos_estado = {}
     
@@ -1484,5 +1850,695 @@ def verificar_reset(anio):
         flash(msg, "info")
     
     return redirect(url_for('home', anio=anio))
+
+# ===== RUTAS DE GESTIÓN DE ALUMNOS =====
+
+@app.route("/gestion_alumnos")
+@role_required('administrador')
+def gestion_alumnos():
+    """Panel de gestión de alumnos"""
+    stats = gestor_alumnos.obtener_estadisticas()
+    return render_template('gestion_alumnos.html', 
+                         stats=stats,
+                         anios=gestor_alumnos.obtener_todos_los_anios())
+
+@app.route("/agregar_alumno", methods=['POST'])
+@role_required('administrador')
+def agregar_alumno():
+    """Agrega un nuevo alumno"""
+    anio = request.form.get('anio', '')
+    nombre = request.form.get('nombre', '').strip()
+    
+    if not anio or not nombre:
+        flash("Año y nombre son requeridos", "error")
+        return redirect(url_for('gestion_alumnos'))
+    
+    if gestor_alumnos.agregar_alumno(anio, nombre):
+        flash(f"✅ Alumno {nombre} agregado a {anio}", "success")
+        # Actualizar la variable global
+        global alumnos_por_anio
+        alumnos_por_anio = obtener_alumnos_por_anio()
+    else:
+        flash(f"❌ El alumno ya existe en {anio}", "error")
+    
+    return redirect(url_for('gestion_alumnos'))
+
+@app.route("/eliminar_alumno", methods=['POST'])
+@role_required('administrador')
+def eliminar_alumno():
+    """Elimina un alumno"""
+    anio = request.form.get('anio', '')
+    nombre = request.form.get('nombre', '')
+    
+    if not anio or not nombre:
+        flash("Datos incompletos", "error")
+        return redirect(url_for('gestion_alumnos'))
+    
+    if gestor_alumnos.eliminar_alumno(anio, nombre):
+        flash(f"✅ Alumno {nombre} eliminado de {anio}", "success")
+        # Actualizar la variable global
+        global alumnos_por_anio
+        alumnos_por_anio = obtener_alumnos_por_anio()
+    else:
+        flash(f"❌ Error al eliminar alumno", "error")
+    
+    return redirect(url_for('gestion_alumnos'))
+
+@app.route("/importar_csv", methods=['POST'])
+@role_required('administrador')
+def importar_csv():
+    """Importa alumnos desde CSV"""
+    anio = request.form.get('anio', '')
+    columna_nombre = request.form.get('columna_nombre', 'nombre')
+    
+    if 'archivo_csv' not in request.files:
+        flash("No se seleccionó archivo", "error")
+        return redirect(url_for('gestion_alumnos'))
+    
+    archivo = request.files['archivo_csv']
+    if archivo.filename == '':
+        flash("No se seleccionó archivo", "error")
+        return redirect(url_for('gestion_alumnos'))
+    
+    if archivo and archivo.filename and archivo.filename.endswith('.csv'):
+        # Guardar archivo temporalmente
+        import tempfile
+        import os
+        
+        with tempfile.NamedTemporaryFile(mode='w+b', suffix='.csv', delete=False) as temp_file:
+            archivo.save(temp_file.name)
+            
+            # Importar desde el archivo temporal
+            exito, mensaje, cantidad = gestor_alumnos.importar_desde_csv(
+                temp_file.name, anio, columna_nombre
+            )
+            
+            # Limpiar archivo temporal
+            os.unlink(temp_file.name)
+            
+            if exito:
+                flash(f"✅ {mensaje}", "success")
+                # Actualizar la variable global
+                global alumnos_por_anio
+                alumnos_por_anio = obtener_alumnos_por_anio()
+            else:
+                flash(f"❌ {mensaje}", "error")
+    else:
+        flash("❌ Solo se permiten archivos CSV", "error")
+    
+    return redirect(url_for('gestion_alumnos'))
+
+@app.route("/validar_csv", methods=['POST'])
+@role_required('administrador')
+def validar_csv():
+    """Valida un archivo CSV antes de importar"""
+    if 'archivo_csv' not in request.files:
+        return {'success': False, 'error': 'No se seleccionó archivo'}
+    
+    archivo = request.files['archivo_csv']
+    if not archivo.filename or archivo.filename == '' or not archivo.filename.endswith('.csv'):
+        return {'success': False, 'error': 'Archivo inválido'}
+    
+    # Guardar temporalmente y validar
+    import tempfile
+    import os
+    
+    with tempfile.NamedTemporaryFile(mode='w+b', suffix='.csv', delete=False) as temp_file:
+        archivo.save(temp_file.name)
+        
+        exito, mensaje, columnas = gestor_alumnos.validar_estructura_csv(temp_file.name)
+        
+        # Limpiar archivo temporal
+        os.unlink(temp_file.name)
+        
+        if exito:
+            return {
+                'success': True,
+                'mensaje': mensaje,
+                'columnas': columnas
+            }
+        else:
+            return {'success': False, 'error': mensaje}
+
+# ===== RUTAS DE ANÁLISIS PSICOPEDAGÓGICO =====
+
+@app.route("/analisis_psicopedagogico/<anio>")
+@role_required('administrador', 'psicopedagogo')
+def analisis_psicopedagogico(anio):
+    """Panel de análisis psicopedagógico"""
+    if anio not in alumnos_por_anio:
+        flash("Año no válido", "error")
+        return redirect(url_for('home'))
+    
+    # Cargar votos
+    votos = db_manager.cargar_votos(anio)
+    if not votos:
+        votos = cargar_json_seguro(f"votos_{anio}.json")
+    
+    if not votos:
+        flash("No hay datos de votos para analizar", "warning")
+        return redirect(url_for('home', anio=anio))
+    
+    # Realizar análisis
+    analisis = analizador_psicopedagogico.analizar_relaciones_sociales(anio, votos)
+    
+    return render_template('analisis_psicopedagogico.html',
+                         anio=anio,
+                         analisis=analisis,
+                         total_alumnos=len(alumnos_por_anio[anio]))
+
+@app.route("/reporte_psicopedagogico/<anio>")
+@role_required('administrador', 'psicopedagogo')
+def reporte_psicopedagogico(anio):
+    """Genera reporte completo para el gabinete"""
+    if anio not in alumnos_por_anio:
+        flash("Año no válido", "error")
+        return redirect(url_for('home'))
+    
+    reporte = analizador_psicopedagogico.generar_reporte_completo(anio)
+    
+    if 'error' in reporte:
+        flash(reporte['error'], "error")
+        return redirect(url_for('home', anio=anio))
+    
+    return render_template('reporte_psicopedagogico.html',
+                         anio=anio,
+                         reporte=reporte)
+
+@app.route("/exportar_analisis/<anio>")
+@role_required('administrador', 'psicopedagogo')
+def exportar_analisis(anio):
+    """Exporta el análisis psicopedagógico a JSON"""
+    reporte = analizador_psicopedagogico.generar_reporte_completo(anio)
+    
+    if 'error' in reporte:
+        flash(reporte['error'], "error")
+        return redirect(url_for('analisis_psicopedagogico', anio=anio))
+    
+    from flask import jsonify, make_response
+    
+    response = make_response(jsonify(reporte))
+    response.headers['Content-Type'] = 'application/json'
+    response.headers['Content-Disposition'] = f'attachment; filename=analisis_psicopedagogico_{anio}_{datetime.now().strftime("%Y%m%d")}.json'
+    
+    return response
+
+# ===== RUTAS DE BANCO DE PREGUNTAS =====
+
+@app.route("/gestion_preguntas")
+@role_required('administrador', 'profesor')
+def gestion_preguntas():
+    """Panel de gestión del banco de preguntas"""
+    stats = banco_preguntas.obtener_estadisticas_banco()
+    materias = banco_preguntas.obtener_materias_disponibles()
+    niveles = banco_preguntas.obtener_niveles_disponibles()
+    
+    return render_template('gestion_preguntas.html',
+                         stats=stats,
+                         materias=materias,
+                         niveles=niveles)
+
+@app.route("/agregar_pregunta", methods=['POST'])
+@role_required('administrador', 'profesor')
+def agregar_pregunta():
+    """Agrega una nueva pregunta al banco"""
+    materia = request.form.get('materia', '')
+    pregunta_texto = request.form.get('pregunta', '')
+    opciones = [
+        request.form.get('opcion1', ''),
+        request.form.get('opcion2', ''),
+        request.form.get('opcion3', ''),
+        request.form.get('opcion4', '')
+    ]
+    respuesta_correcta = int(request.form.get('respuesta_correcta', 0))
+    puntos = int(request.form.get('puntos', 10))
+    explicacion = request.form.get('explicacion', '')
+    nivel = request.form.get('nivel', 'basico')
+    
+    nueva_pregunta = {
+        'pregunta': pregunta_texto,
+        'opciones': opciones,
+        'respuesta_correcta': respuesta_correcta,
+        'puntos': puntos,
+        'explicacion': explicacion,
+        'nivel': nivel
+    }
+    
+    if banco_preguntas.agregar_pregunta(materia, nueva_pregunta):
+        flash(f"✅ Pregunta agregada a {materia}", "success")
+    else:
+        flash("❌ Error al agregar pregunta", "error")
+    
+    return redirect(url_for('gestion_preguntas'))
+
+@app.route("/api/estado_votacion/<anio>")
+@login_required
+def api_estado_votacion(anio):
+    """API para obtener el estado de votación en tiempo real"""
+    from flask import jsonify
+    from datetime import datetime
+    
+    # ✅ CORREGIDO: Usar función que lee el archivo actual, no variable global
+    alumnos_actuales = obtener_alumnos_por_anio()
+    
+    if anio not in alumnos_actuales:
+        return jsonify({'error': 'Año no válido'}), 400
+    
+    alumnos = alumnos_actuales.get(anio, [])
+    total_alumnos = len(alumnos)
+    
+    # Obtener votos desde la base de datos
+    votos_bd = db_manager.obtener_votos_por_anio(anio)
+    ya_votaron = set(votos_bd.keys()) if votos_bd else set()
+    
+    votaron = len(ya_votaron)
+    restantes = total_alumnos - votaron
+    porcentaje = (votaron / total_alumnos * 100) if total_alumnos > 0 else 0
+    
+    # Estados de alumnos
+    estados_alumnos = {}
+    for alumno in alumnos:
+        estados_alumnos[alumno] = 'completado' if alumno in ya_votaron else 'pendiente'
+    
+    return jsonify({
+        'total_alumnos': total_alumnos,
+        'votaron': votaron,
+        'restantes': restantes,
+        'porcentaje': round(porcentaje, 1),
+        'estados_alumnos': estados_alumnos,
+        'ya_votaron': list(ya_votaron),
+        'timestamp': datetime.now().isoformat(),
+        'cache_buster': int(datetime.now().timestamp())
+    })
+
+@app.route("/dashboard")
+@role_required('administrador', 'profesor', 'psicopedagogo')
+def dashboard():
+    """Dashboard principal para docentes con todas las funcionalidades"""
+    from datetime import datetime, timedelta
+    
+    # ✅ CORREGIDO: Usar función que lee archivo actual
+    alumnos_actuales = obtener_alumnos_por_anio()
+    
+    # Obtener estadísticas generales
+    estadisticas_generales = {}
+    
+    # Contar alumnos por año
+    total_alumnos = sum(len(alumnos) for alumnos in alumnos_actuales.values())
+    estadisticas_generales['total_alumnos'] = total_alumnos
+    estadisticas_generales['años_activos'] = len(alumnos_actuales)
+    
+    # Estadísticas de votación
+    total_votos = 0
+    votos_por_anio = {}
+    for anio in alumnos_actuales.keys():
+        votos_bd = db_manager.obtener_votos_por_anio(anio)
+        votos_count = len(votos_bd) if votos_bd else 0
+        votos_por_anio[anio] = votos_count
+        total_votos += votos_count
+    
+    estadisticas_generales['total_votos'] = total_votos
+    estadisticas_generales['votos_por_anio'] = votos_por_anio
+    
+    # Porcentaje de participación
+    porcentaje_participacion = (total_votos / total_alumnos * 100) if total_alumnos > 0 else 0
+    estadisticas_generales['porcentaje_participacion'] = round(porcentaje_participacion, 1)
+    
+    # Configuración actual
+    config_actual = db_manager.cargar_configuracion_aula()
+    
+    return render_template('dashboard.html',
+                         estadisticas=estadisticas_generales,
+                         alumnos_por_anio=alumnos_por_anio,
+                         config=config_actual,
+                         usuario=session.get('usuario'),
+                         rol=session.get('rol'))
+
+@app.route("/dashboard/carga_alumnos", methods=['GET', 'POST'])
+@role_required('administrador', 'profesor')
+def dashboard_carga_alumnos():
+    """Panel para carga masiva de alumnos"""
+    if request.method == 'POST':
+        # Manejar carga de CSV
+        if 'archivo_csv' not in request.files:
+            flash('No se seleccionó archivo', 'error')
+            return redirect(url_for('dashboard_carga_alumnos'))
+        
+        archivo = request.files['archivo_csv']
+        anio = request.form.get('anio', '').strip()
+        
+        if archivo.filename == '':
+            flash('No se seleccionó archivo', 'error')
+            return redirect(url_for('dashboard_carga_alumnos'))
+        
+        if not anio:
+            flash('Debe especificar el año del curso', 'error')
+            return redirect(url_for('dashboard_carga_alumnos'))
+        
+        try:
+            # Leer CSV
+            import io
+            import csv
+            stream = io.StringIO(archivo.stream.read().decode("UTF8"), newline=None)
+            csv_input = csv.reader(stream)
+            
+            alumnos_nuevos = []
+            for row_num, row in enumerate(csv_input, 1):
+                if row and len(row) > 0:
+                    nombre = row[0].strip()
+                    if nombre and nombre not in ['nombre', 'Nombre', 'NOMBRE']:  # Skip headers
+                        alumnos_nuevos.append(nombre)
+            
+            if alumnos_nuevos:
+                # Usar el gestor de alumnos para agregar
+                for alumno in alumnos_nuevos:
+                    gestor_alumnos.agregar_alumno(anio, alumno)
+                
+                # Actualizar la variable global
+                global alumnos_por_anio
+                from gestor_alumnos import obtener_alumnos_por_anio
+                alumnos_por_anio = obtener_alumnos_por_anio()
+                
+                flash(f'✅ Se agregaron {len(alumnos_nuevos)} alumnos al año {anio}', 'success')
+            else:
+                flash('No se encontraron alumnos válidos en el archivo', 'warning')
+                
+        except Exception as e:
+            flash(f'Error procesando archivo CSV: {str(e)}', 'error')
+        
+        return redirect(url_for('dashboard_carga_alumnos'))
+    
+    return render_template('dashboard_carga_alumnos.html',
+                         alumnos_por_anio=alumnos_por_anio,
+                         usuario=session.get('usuario'),
+                         rol=session.get('rol'))
+
+@app.route("/dashboard/analisis_problematicos")
+@role_required('administrador', 'psicopedagogo')
+def dashboard_analisis_problematicos():
+    """Panel de análisis de alumnos problemáticos"""
+    # Análisis por año
+    analisis_por_anio = {}
+    
+    for anio, alumnos in alumnos_por_anio.items():
+        if not alumnos:
+            continue
+            
+        # Obtener votos del año
+        votos_bd = db_manager.obtener_votos_por_anio(anio)
+        
+        # Análisis de calificaciones recibidas
+        calificaciones_recibidas = {}
+        bloqueos_recibidos = {}
+        
+        for votante, voto_data in votos_bd.items():
+            calificaciones = voto_data.get('calificaciones', {})
+            bloqueado = voto_data.get('alumno_bloqueado')
+            
+            # Procesar calificaciones
+            for alumno_evaluado, calificacion in calificaciones.items():
+                if alumno_evaluado not in calificaciones_recibidas:
+                    calificaciones_recibidas[alumno_evaluado] = []
+                calificaciones_recibidas[alumno_evaluado].append(calificacion)
+            
+            # Procesar bloqueos
+            if bloqueado:
+                if bloqueado not in bloqueos_recibidos:
+                    bloqueos_recibidos[bloqueado] = 0
+                bloqueos_recibidos[bloqueado] += 1
+        
+        # Calcular métricas
+        metricas_alumnos = []
+        for alumno in alumnos:
+            califs = calificaciones_recibidas.get(alumno, [])
+            bloqueos = bloqueos_recibidos.get(alumno, 0)
+            
+            if califs:
+                promedio = sum(califs) / len(califs)
+                califs_bajas = sum(1 for c in califs if c <= 2)
+                porcentaje_bajas = (califs_bajas / len(califs)) * 100
+            else:
+                promedio = 0
+                porcentaje_bajas = 0
+                califs_bajas = 0
+            
+            # Score de riesgo (0-100, donde 100 es más problemático)
+            score_riesgo = 0
+            if califs:
+                score_riesgo += (5 - promedio) * 15  # Promedio bajo
+                score_riesgo += porcentaje_bajas * 0.8  # Muchas calificaciones bajas
+                score_riesgo += bloqueos * 10  # Bloqueos recibidos
+                score_riesgo = min(score_riesgo, 100)
+            
+            metricas_alumnos.append({
+                'nombre': alumno,
+                'promedio_calificaciones': round(promedio, 2),
+                'total_evaluaciones': len(califs),
+                'calificaciones_bajas': califs_bajas,
+                'porcentaje_bajas': round(porcentaje_bajas, 1),
+                'bloqueos_recibidos': bloqueos,
+                'score_riesgo': round(score_riesgo, 1),
+                'nivel_riesgo': 'Alto' if score_riesgo >= 70 else 'Medio' if score_riesgo >= 40 else 'Bajo'
+            })
+        
+        # Ordenar por score de riesgo
+        metricas_alumnos.sort(key=lambda x: x['score_riesgo'], reverse=True)
+        
+        analisis_por_anio[anio] = {
+            'alumnos': metricas_alumnos,
+            'total_evaluaciones': len(votos_bd),
+            'alumnos_alto_riesgo': len([a for a in metricas_alumnos if a['score_riesgo'] >= 70]),
+            'alumnos_medio_riesgo': len([a for a in metricas_alumnos if 40 <= a['score_riesgo'] < 70]),
+            'alumnos_bajo_riesgo': len([a for a in metricas_alumnos if a['score_riesgo'] < 40])
+        }
+    
+    return render_template('dashboard_analisis_problematicos.html',
+                         analisis=analisis_por_anio,
+                         usuario=session.get('usuario'),
+                         rol=session.get('rol'))
+
+@app.route("/dashboard/estadisticas_completas")
+@role_required('administrador', 'profesor', 'psicopedagogo')
+def dashboard_estadisticas_completas():
+    """Panel completo de estadísticas con gráficos"""
+    estadisticas = {}
+    
+    # Estadísticas por año
+    for anio, alumnos in alumnos_por_anio.items():
+        votos_bd = db_manager.obtener_votos_por_anio(anio)
+        
+        # Estadísticas básicas
+        stats_anio = {
+            'total_alumnos': len(alumnos),
+            'total_votos': len(votos_bd),
+            'participacion': (len(votos_bd) / len(alumnos) * 100) if alumnos else 0,
+            'distribuciones_calificaciones': {},
+            'tendencias_bloqueo': {},
+            'patrones_votacion': {}
+        }
+        
+        # Análisis de calificaciones
+        todas_calificaciones = []
+        for voto_data in votos_bd.values():
+            calificaciones = voto_data.get('calificaciones', {})
+            todas_calificaciones.extend(calificaciones.values())
+        
+        if todas_calificaciones:
+            # Distribución de calificaciones
+            for i in range(1, 6):
+                count = todas_calificaciones.count(i)
+                stats_anio['distribuciones_calificaciones'][i] = {
+                    'count': count,
+                    'porcentaje': (count / len(todas_calificaciones)) * 100
+                }
+        
+        estadisticas[anio] = stats_anio
+    
+    return render_template('dashboard_estadisticas.html',
+                         estadisticas=estadisticas,
+                         usuario=session.get('usuario'),
+                         rol=session.get('rol'))
+
+@app.route("/dashboard/omitir_trivia/<anio>", methods=['POST'])
+@role_required('administrador', 'profesor')
+def omitir_trivia_curso(anio):
+    """Permite al docente omitir la trivia para todos los alumnos de un año"""
+    try:
+        # Obtener alumnos del año
+        alumnos_actuales = get_alumnos_actuales()
+        alumnos = alumnos_actuales.get(anio, [])
+        
+        if not alumnos:
+            flash(f'No se encontraron alumnos en el año {anio}', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Marcar trivia como completada para todos los alumnos del año
+        contador_omitidos = 0
+        for alumno in alumnos:
+            session[f'trivia_completada_{anio}_{alumno}'] = True
+            contador_omitidos += 1
+        
+        flash(f'✅ Trivia omitida para {contador_omitidos} alumnos de {anio}. Ahora pueden votar directamente.', 'success')
+        
+    except Exception as e:
+        flash(f'Error al omitir trivia: {str(e)}', 'error')
+    
+    return redirect(url_for('dashboard'))
+
+@app.route("/dashboard/asignacion_aleatoria/<anio>", methods=['POST'])
+@role_required('administrador', 'profesor')
+def asignacion_aleatoria_automatica(anio):
+    """Genera asignaciones aleatorias automáticas sin votación de los alumnos"""
+    try:
+        # Obtener alumnos del año
+        alumnos_actuales = get_alumnos_actuales()
+        alumnos = alumnos_actuales.get(anio, [])
+        
+        if not alumnos:
+            flash(f'No se encontraron alumnos en el año {anio}', 'error')
+            return redirect(url_for('dashboard'))
+        
+        if len(alumnos) < 2:
+            flash(f'Se necesitan al menos 2 alumnos para generar asignaciones', 'warning')
+            return redirect(url_for('dashboard'))
+        
+        # Generar votos aleatorios para todos los alumnos
+        import random
+        from datetime import datetime
+        
+        votos_generados = 0
+        timestamp_base = datetime.now().isoformat()
+        
+        for i, alumno in enumerate(alumnos):
+            # Verificar si ya votó
+            votos_existentes = db_manager.obtener_votos_por_anio(anio)
+            if votos_existentes and alumno in votos_existentes:
+                continue  # Saltar si ya votó
+            
+            # Obtener otros alumnos (excluir al que está "votando")
+            otros_alumnos = [a for a in alumnos if a != alumno]
+            
+            # Seleccionar 5 alumnos aleatorios para evaluar
+            num_evaluaciones = min(5, len(otros_alumnos))
+            alumnos_a_evaluar = random.sample(otros_alumnos, num_evaluaciones)
+            
+            # Generar calificaciones aleatorias (pero realistas)
+            ratings = {}
+            for alumno_eval in alumnos_a_evaluar:
+                # Distribución más realista: más 3s y 4s, menos 1s y 5s
+                calificacion = random.choices([1, 2, 3, 4, 5], weights=[10, 20, 40, 25, 5])[0]
+                ratings[alumno_eval] = calificacion
+            
+            # Ocasionalmente bloquear a alguien (20% de probabilidad)
+            alumno_bloqueado = random.choice(alumnos_a_evaluar) if random.random() < 0.2 else None
+            
+            # Timestamp único para cada voto
+            timestamp_voto = f"{timestamp_base}_{i:03d}"
+            
+            # Guardar voto automático
+            exito = db_manager.guardar_voto(
+                anio=anio,
+                alumno=alumno,
+                calificaciones=ratings,
+                alumno_bloqueado=alumno_bloqueado,
+                timestamp=timestamp_voto
+            )
+            
+            if exito:
+                votos_generados += 1
+        
+        if votos_generados > 0:
+            flash(f'✅ Se generaron {votos_generados} asignaciones aleatorias para {anio}. Los resultados están listos.', 'success')
+        else:
+            flash(f'ℹ️ Todos los alumnos de {anio} ya habían votado', 'info')
+            
+    except Exception as e:
+        flash(f'Error generando asignaciones aleatorias: {str(e)}', 'error')
+    
+    return redirect(url_for('dashboard'))
+
+@app.route("/dashboard/resetear_trivia/<anio>", methods=['POST'])
+@role_required('administrador', 'profesor')
+def resetear_trivia_curso(anio):
+    """Resetea el estado de trivia para todos los alumnos de un año"""
+    try:
+        # Obtener alumnos del año
+        alumnos_actuales = get_alumnos_actuales()
+        alumnos = alumnos_actuales.get(anio, [])
+        
+        if not alumnos:
+            flash(f'No se encontraron alumnos en el año {anio}', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Resetear trivia para todos los alumnos del año
+        contador_reseteados = 0
+        for alumno in alumnos:
+            session_key = f'trivia_completada_{anio}_{alumno}'
+            if session_key in session:
+                session.pop(session_key, None)
+                contador_reseteados += 1
+        
+        flash(f'✅ Estado de trivia reseteado para {contador_reseteados} alumnos de {anio}', 'success')
+        
+    except Exception as e:
+        flash(f'Error al resetear trivia: {str(e)}', 'error')
+    
+    return redirect(url_for('dashboard'))
+
+@app.route("/dashboard/resetear_completo/<anio>", methods=['POST'])
+@role_required('administrador', 'profesor')
+def resetear_completo_curso(anio):
+    """Resetea COMPLETAMENTE un año: borra votos de BD + limpia sesión trivia"""
+    try:
+        # Obtener alumnos del año
+        alumnos_actuales = get_alumnos_actuales()
+        alumnos = alumnos_actuales.get(anio, [])
+        
+        if not alumnos:
+            flash(f'No se encontraron alumnos en el año {anio}', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # 1. Borrar TODOS los votos de la base de datos
+        exito_bd, votos_borrados = db_manager.borrar_votos_anio(anio)
+        
+        # 2. Limpiar sesiones de trivia
+        contador_trivia = 0
+        for alumno in alumnos:
+            session_key = f'trivia_completada_{anio}_{alumno}'
+            if session_key in session:
+                session.pop(session_key, None)
+                contador_trivia += 1
+        
+        if exito_bd:
+            flash(f'✅ RESETEO COMPLETO: {votos_borrados} votos borrados de BD + {contador_trivia} sesiones de trivia limpiadas para {anio}', 'success')
+        else:
+            flash(f'❌ Error al borrar votos de la base de datos para {anio}', 'error')
+        
+    except Exception as e:
+        flash(f'Error en reseteo completo: {str(e)}', 'error')
+    
+    return redirect(url_for('dashboard'))
+
+@app.route("/dashboard/borrar_voto/<anio>/<alumno>", methods=['POST'])
+@role_required('administrador', 'profesor')
+def borrar_voto_individual(anio, alumno):
+    """Borra el voto de un alumno específico"""
+    try:
+        exito = db_manager.borrar_voto_alumno(anio, alumno)
+        
+        if exito:
+            # También limpiar sesión de trivia de ese alumno
+            session_key = f'trivia_completada_{anio}_{alumno}'
+            session.pop(session_key, None)
+            
+            flash(f'✅ Voto de {alumno} borrado exitosamente', 'success')
+        else:
+            flash(f'⚠️ {alumno} no tenía voto registrado', 'warning')
+            
+    except Exception as e:
+        flash(f'Error borrando voto de {alumno}: {str(e)}', 'error')
+    
+    return redirect(url_for('home', anio=anio))
+
 if __name__ == "__main__":
     app.run(debug=True)

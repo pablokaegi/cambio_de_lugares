@@ -178,6 +178,10 @@
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
         }
         
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #007bff 0%, #6f42c1 100%);
+        }
+        
         .btn-warning-custom {
             background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
         }
@@ -373,8 +377,12 @@
                 </a>
                 {% endif %}
                 
-                <button onclick="guardarAsignacion()" class="btn-custom btn-success-custom">
+                <button onclick="mostrarDialogoGuardar()" class="btn-custom btn-success-custom">
                     <i class="fas fa-save"></i> Guardar Asignación
+                </button>
+                
+                <button onclick="mostrarDialogoCargar()" class="btn-custom btn-primary-custom">
+                    <i class="fas fa-folder-open"></i> Cargar Asignación
                 </button>
                 
                 <button onclick="window.print()" class="btn-custom">
@@ -385,6 +393,52 @@
                     <i class="fas fa-file-download"></i> Exportar
                 </a>
             </div>
+            
+            <!-- Modal para Guardar Asignación -->
+            <div class="modal fade" id="modalGuardar" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Guardar Asignación</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="nombreAsignacion" class="form-label">Nombre de la asignación:</label>
+                                <input type="text" class="form-control" id="nombreAsignacion" 
+                                       placeholder="Ej: Asignación Examen Final">
+                            </div>
+                            <small class="text-muted">Si no especificas un nombre, se generará automáticamente con fecha y hora.</small>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-success" onclick="guardarAsignacion()">Guardar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal para Cargar Asignación -->
+            <div class="modal fade" id="modalCargar" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Cargar Asignación</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="listaAsignaciones">
+                                <div class="text-center">
+                                    <i class="fas fa-spinner fa-spin"></i> Cargando asignaciones...
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -393,6 +447,17 @@
             if (confirm('¿Estás seguro de regenerar la asignación? Se perderá la configuración actual.')) {
                 window.location.href = `{{ url_for('asignacion_bancos', anio=anio) }}?regenerar=true`;
             }
+        }
+
+        function mostrarDialogoGuardar() {
+            const modal = new bootstrap.Modal(document.getElementById('modalGuardar'));
+            modal.show();
+        }
+
+        function mostrarDialogoCargar() {
+            const modal = new bootstrap.Modal(document.getElementById('modalCargar'));
+            modal.show();
+            cargarListaAsignaciones();
         }
 
         function guardarAsignacion() {
@@ -417,6 +482,9 @@
                 });
             });
 
+            // Obtener nombre personalizado o usar automático
+            const nombreAsignacion = document.getElementById('nombreAsignacion').value.trim();
+
             // Crear formulario para enviar datos
             const form = document.createElement('form');
             form.method = 'POST';
@@ -432,8 +500,75 @@
             dataInput.name = 'asignacion_data';
             dataInput.value = JSON.stringify(asignacion);
             
+            const nombreInput = document.createElement('input');
+            nombreInput.type = 'hidden';
+            nombreInput.name = 'nombre_asignacion';
+            nombreInput.value = nombreAsignacion;
+            
             form.appendChild(anioInput);
             form.appendChild(dataInput);
+            form.appendChild(nombreInput);
+            document.body.appendChild(form);
+            
+            form.submit();
+        }
+
+        function cargarListaAsignaciones() {
+            fetch(`{{ url_for('listar_asignaciones', anio=anio) }}`)
+                .then(response => response.json())
+                .then(data => {
+                    const lista = document.getElementById('listaAsignaciones');
+                    if (data.success && data.asignaciones.length > 0) {
+                        lista.innerHTML = '';
+                        data.asignaciones.forEach(asignacion => {
+                            const item = document.createElement('div');
+                            item.className = 'card mb-2';
+                            item.innerHTML = `
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="card-title mb-1">${asignacion.nombre}</h6>
+                                            <small class="text-muted">
+                                                ${asignacion.total_alumnos} alumnos - ${asignacion.fecha}
+                                                ${asignacion.es_actual ? '<span class="badge bg-success ms-1">Actual</span>' : ''}
+                                            </small>
+                                        </div>
+                                        <button class="btn btn-primary btn-sm" onclick="cargarAsignacionEspecifica('${asignacion.nombre}')">
+                                            <i class="fas fa-download"></i> Cargar
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                            lista.appendChild(item);
+                        });
+                    } else {
+                        lista.innerHTML = '<div class="text-center text-muted">No hay asignaciones guardadas</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('listaAsignaciones').innerHTML = 
+                        '<div class="text-danger">Error al cargar asignaciones</div>';
+                });
+        }
+
+        function cargarAsignacionEspecifica(nombreAsignacion) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ url_for("cargar_asignacion") }}';
+            
+            const anioInput = document.createElement('input');
+            anioInput.type = 'hidden';
+            anioInput.name = 'anio';
+            anioInput.value = '{{ anio }}';
+            
+            const nombreInput = document.createElement('input');
+            nombreInput.type = 'hidden';
+            nombreInput.name = 'nombre_asignacion';
+            nombreInput.value = nombreAsignacion;
+            
+            form.appendChild(anioInput);
+            form.appendChild(nombreInput);
             document.body.appendChild(form);
             
             form.submit();

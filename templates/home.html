@@ -225,22 +225,24 @@
                 
                 <h5><i class="fas fa-chart-pie me-2"></i>Progreso de Votación</h5>
                 <div class="progress mb-3">
-                    <div class="progress-bar bg-success" style="width: {{ porcentaje }}%">
-                        {{ "%.1f"|format(porcentaje) }}% ({{ votaron }}/{{ total_alumnos }})
+                    <div class="progress-bar bg-success" id="barra-progreso" style="width: {{ porcentaje }}%">
+                        <span id="texto-progreso">{{ "%.1f"|format(porcentaje) }}% ({{ votaron }}/{{ total_alumnos }})</span>
                     </div>
                 </div>
                 
-                {% if restantes > 0 %}
-                <div class="alert alert-warning alert-custom">
-                    <i class="fas fa-clock me-2"></i>
-                    <strong>{{ restantes }} alumno(s) pendiente(s) de votar</strong>
+                <div id="alerta-progreso">
+                    {% if restantes > 0 %}
+                    <div class="alert alert-warning alert-custom">
+                        <i class="fas fa-clock me-2"></i>
+                        <strong><span id="restantes-count">{{ restantes }}</span> alumno(s) pendiente(s) de votar</strong>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-success alert-custom">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>¡Todos los alumnos han completado su votación!</strong>
+                    </div>
+                    {% endif %}
                 </div>
-                {% else %}
-                <div class="alert alert-success alert-custom">
-                    <i class="fas fa-check-circle me-2"></i>
-                    <strong>¡Todos los alumnos han completado su votación!</strong>
-                </div>
-                {% endif %}
             </div>
 
             <!-- Lista de alumnos -->
@@ -273,13 +275,17 @@
                                 </td>
                                 <td class="text-center">
                                     {% if alumno not in ya_votaron %}
-                                        <a href="{{ url_for('votar', nombre=alumno, anio=anio) }}" class="btn btn-primary btn-sm">
+                                        <a href="{{ url_for('votar', nombre=alumno, anio=anio) }}" 
+                                           class="btn btn-outline-primary btn-sm" 
+                                           data-alumno="{{ alumno }}">
                                             <i class="fas fa-vote-yea me-1"></i>Votar
                                         </a>
                                     {% else %}
-                                        <span class="text-muted">
-                                            <i class="fas fa-check-circle me-1"></i>Ya votó
-                                        </span>
+                                        <button class="btn btn-success btn-sm" 
+                                                data-alumno="{{ alumno }}" 
+                                                disabled>
+                                            <i class="fas fa-check me-1"></i>Completado
+                                        </button>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -338,5 +344,100 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Actualizar estado de votación en tiempo real
+        function actualizarEstadoVotacion() {
+            const anio = '{{ anio }}';
+            if (!anio) return;
+            
+            fetch(`/api/estado_votacion/${anio}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error('Error:', data.error);
+                        return;
+                    }
+                    
+                    console.log('Datos recibidos:', data); // Para debug
+                    
+                    // Actualizar barra de progreso con IDs específicos
+                    const progressBar = document.getElementById('barra-progreso');
+                    const progressText = document.getElementById('texto-progreso');
+                    const restantesCount = document.getElementById('restantes-count');
+                    const alertaProgreso = document.getElementById('alerta-progreso');
+                    
+                    if (progressBar) {
+                        progressBar.style.width = data.porcentaje + '%';
+                    }
+                    
+                    if (progressText) {
+                        progressText.textContent = `${data.porcentaje}% (${data.votaron}/${data.total_alumnos})`;
+                    }
+                    
+                    if (alertaProgreso) {
+                        if (data.restantes > 0) {
+                            alertaProgreso.innerHTML = `
+                                <div class="alert alert-warning alert-custom">
+                                    <i class="fas fa-clock me-2"></i>
+                                    <strong>${data.restantes} alumno(s) pendiente(s) de votar</strong>
+                                </div>
+                            `;
+                        } else {
+                            alertaProgreso.innerHTML = `
+                                <div class="alert alert-success alert-custom">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <strong>¡Todos los alumnos han completado su votación!</strong>
+                                </div>
+                            `;
+                        }
+                    }
+                    
+                    // Actualizar estados de alumnos
+                    for (const [alumno, estado] of Object.entries(data.estados_alumnos)) {
+                        const button = document.querySelector(`[data-alumno="${alumno}"]`);
+                        const row = button?.closest('tr');
+                        
+                        if (button && row) {
+                            const badgeCell = row.querySelector('td:nth-child(3)');
+                            
+                            if (estado === 'completado') {
+                                // Actualizar botón
+                                button.className = 'btn btn-success btn-sm';
+                                button.innerHTML = '<i class="fas fa-check me-1"></i>Completado';
+                                button.onclick = null;
+                                button.style.pointerEvents = 'none';
+                                button.disabled = true;
+                                
+                                // Actualizar badge
+                                if (badgeCell) {
+                                    badgeCell.innerHTML = '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Completado</span>';
+                                }
+                            } else {
+                                // Actualizar botón
+                                button.className = 'btn btn-outline-primary btn-sm';
+                                button.innerHTML = '<i class="fas fa-vote-yea me-1"></i>Votar';
+                                button.disabled = false;
+                                button.style.pointerEvents = 'auto';
+                                
+                                // Actualizar badge
+                                if (badgeCell) {
+                                    badgeCell.innerHTML = '<span class="badge bg-warning"><i class="fas fa-clock me-1"></i>Pendiente</span>';
+                                }
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error actualizando estado:', error);
+                });
+        }
+        
+        // Actualizar cada 3 segundos
+        setInterval(actualizarEstadoVotacion, 3000);
+        
+        // Actualizar inmediatamente al cargar
+        document.addEventListener('DOMContentLoaded', actualizarEstadoVotacion);
+    </script>
 </body>
 </html>

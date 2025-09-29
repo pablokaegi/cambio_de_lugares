@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Docentes - Instituto Puertas del Sol</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c5aa0;
+            --secondary-color: #f8f9fa;
+            --accent-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .dashboard-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            max-width: 1400px;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: var(--primary-color);
+            color: white;
+            padding: 20px 30px;
+            position: relative;
+        }
+        
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .stats-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 5px solid var(--primary-color);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+        
+        .stats-label {
+            font-size: 1rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        
+        .quick-action {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a8a 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            border: none;
+        }
+        
+        .quick-action:hover {
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(44, 90, 160, 0.4);
+        }
+        
+        .quick-action i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .alert-custom {
+            border-radius: 15px;
+            border: none;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+        }
+        
+        .navigation-tabs {
+            background: var(--secondary-color);
+            padding: 15px 30px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .nav-pill-custom {
+            background: var(--primary-color);
+            color: white;
+            border-radius: 25px;
+            padding: 8px 20px;
+            margin-right: 10px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-pill-custom:hover {
+            background: #1e3a8a;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .progress-ring {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 15px;
+        }
+        
+        .config-status {
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+        
+        .config-active {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .config-inactive {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="user-info">
+                <i class="fas fa-user me-2"></i>{{ usuario }} ({{ rol }})
+                <a href="{{ url_for('logout') }}" class="text-white ms-3">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+            <h1><i class="fas fa-tachometer-alt me-3"></i>Dashboard Docentes</h1>
+            <p class="mb-0">Panel de control y gestión - Instituto Puertas del Sol</p>
+        </div>
+        
+        <!-- Navigation -->
+        <div class="navigation-tabs">
+            <a href="{{ url_for('home') }}" class="nav-pill-custom">
+                <i class="fas fa-home me-2"></i>Inicio
+            </a>
+            <a href="{{ url_for('dashboard_carga_alumnos') }}" class="nav-pill-custom">
+                <i class="fas fa-upload me-2"></i>Cargar Alumnos
+            </a>
+            <a href="{{ url_for('gestion_alumnos') }}" class="nav-pill-custom">
+                <i class="fas fa-users me-2"></i>Gestión Alumnos
+            </a>
+            <a href="{{ url_for('configuracion_aula') }}" class="nav-pill-custom">
+                <i class="fas fa-cogs me-2"></i>Configuración
+            </a>
+            <a href="{{ url_for('gestion_preguntas') }}" class="nav-pill-custom">
+                <i class="fas fa-question-circle me-2"></i>Preguntas
+            </a>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="container-fluid p-4">
+            <div class="row">
+                <!-- Estadísticas Principales -->
+                <div class="col-md-3">
+                    <div class="stats-card text-center">
+                        <div class="stats-number">{{ estadisticas.total_alumnos }}</div>
+                        <div class="stats-label">Total Alumnos</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="stats-card text-center">
+                        <div class="stats-number">{{ estadisticas.años_activos }}</div>
+                        <div class="stats-label">Años Activos</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="stats-card text-center">
+                        <div class="stats-number">{{ estadisticas.total_votos }}</div>
+                        <div class="stats-label">Total Votos</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="stats-card text-center">
+                        <div class="stats-number">{{ estadisticas.porcentaje_participacion }}%</div>
+                        <div class="stats-label">Participación</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <!-- Acciones Rápidas -->
+                <div class="col-md-4">
+                    <h5 class="mb-3"><i class="fas fa-rocket me-2"></i>Acciones Rápidas</h5>
+                    
+                    <a href="{{ url_for('dashboard_carga_alumnos') }}" class="quick-action text-center">
+                        <i class="fas fa-file-csv"></i>
+                        <h6 class="mt-2 mb-1">Cargar Alumnos CSV</h6>
+                        <small>Importar listas desde archivo</small>
+                    </a>
+                    
+                    <a href="{{ url_for('configuracion_aula') }}" class="quick-action text-center">
+                        <i class="fas fa-cogs"></i>
+                        <h6 class="mt-2 mb-1">Configurar Aula</h6>
+                        <small>Ajustar trivia y distribución</small>
+                    </a>
+                    
+                    <a href="{{ url_for('gestion_preguntas') }}" class="quick-action text-center">
+                        <i class="fas fa-brain"></i>
+                        <h6 class="mt-2 mb-1">Gestionar Trivia</h6>
+                        <small>Agregar/editar preguntas</small>
+                    </a>
+                    
+                    <a href="{{ url_for('dashboard_analisis_problematicos') }}" class="quick-action text-center">
+                        <i class="fas fa-chart-line"></i>
+                        <h6 class="mt-2 mb-1">Análisis Psicopedagógico</h6>
+                        <small>Reportes y estadísticas</small>
+                    </a>
+                </div>
+                
+                <!-- Gráfico de Participación -->
+                <div class="col-md-4">
+                    <div class="chart-container">
+                        <h5 class="text-center mb-3"><i class="fas fa-chart-pie me-2"></i>Participación por Año</h5>
+                        <canvas id="chartParticipacion" width="300" height="300"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Estado del Sistema -->
+                <div class="col-md-4">
+                    <h5 class="mb-3"><i class="fas fa-info-circle me-2"></i>Estado del Sistema</h5>
+                    
+                    <!-- Configuración Actual -->
+                    <div class="chart-container">
+                        <h6><i class="fas fa-cogs me-2"></i>Configuración Actual</h6>
+                        
+                        <div class="config-status {{ 'config-active' if config.trivia_obligatoria else 'config-inactive' }}">
+                            <i class="fas fa-brain me-2"></i>
+                            Trivia Educativa: {{ 'Activada' if config.trivia_obligatoria else 'Desactivada' }}
+                        </div>
+                        
+                        <div class="config-status config-active">
+                            <i class="fas fa-chair me-2"></i>
+                            Aula: {{ config.filas_maximas }}x{{ config.columnas_por_fila }}
+                        </div>
+                        
+                        <div class="config-status config-active">
+                            <i class="fas fa-database me-2"></i>
+                            Base de Datos: Operativa
+                        </div>
+                        
+                        <div class="config-status config-active">
+                            <i class="fas fa-users me-2"></i>
+                            Módulos: Cargados
+                        </div>
+                    </div>
+                    
+                    <!-- Alertas del Sistema -->
+                    {% if estadisticas.porcentaje_participacion < 50 %}
+                    <div class="alert alert-warning alert-custom">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Baja participación</strong><br>
+                        Solo {{ estadisticas.porcentaje_participacion }}% de alumnos han votado
+                    </div>
+                    {% endif %}
+                    
+                    {% if estadisticas.porcentaje_participacion >= 80 %}
+                    <div class="alert alert-success alert-custom">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Excelente participación</strong><br>
+                        {{ estadisticas.porcentaje_participacion }}% de participación alcanzada
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Tabla de Alumnos por Año -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="chart-container">
+                        <h5><i class="fas fa-table me-2"></i>Resumen por Años</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Año</th>
+                                        <th>Total Alumnos</th>
+                                        <th>Votos Registrados</th>
+                                        <th>Participación</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for anio, alumnos in alumnos_por_anio.items() %}
+                                    {% set votos = estadisticas.votos_por_anio.get(anio, 0) %}
+                                    {% set total = alumnos|length %}
+                                    {% set porcentaje = (votos / total * 100) if total > 0 else 0 %}
+                                    <tr>
+                                        <td><strong>{{ anio|title }}</strong></td>
+                                        <td>{{ total }}</td>
+                                        <td>{{ votos }}</td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar 
+                                                    {% if porcentaje >= 80 %}bg-success
+                                                    {% elif porcentaje >= 50 %}bg-warning
+                                                    {% else %}bg-danger{% endif %}" 
+                                                    style="width: {{ porcentaje }}%">
+                                                    {{ "%.1f"|format(porcentaje) }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group-vertical" role="group">
+                                                <!-- Botones de visualización -->
+                                                <div class="mb-2">
+                                                    <a href="{{ url_for('home', anio=anio) }}" class="btn btn-sm btn-primary me-1">
+                                                        <i class="fas fa-eye me-1"></i>Ver
+                                                    </a>
+                                                    <a href="{{ url_for('estadisticas', anio=anio) }}" class="btn btn-sm btn-info">
+                                                        <i class="fas fa-chart-bar me-1"></i>Stats
+                                                    </a>
+                                                </div>
+                                                
+                                                <!-- Botones de control docente -->
+                                                <div class="btn-group" role="group">
+                                                    <form method="POST" action="{{ url_for('omitir_trivia_curso', anio=anio) }}" style="display: inline;" 
+                                                          onsubmit="return confirm('¿Omitir trivia para todos los alumnos de {{ anio }}?')">
+                                                        <button type="submit" class="btn btn-sm btn-warning" title="Omitir trivia para este año">
+                                                            <i class="fas fa-forward me-1"></i>Omitir Trivia
+                                                        </button>
+                                                    </form>
+                                                    
+                                                    <form method="POST" action="{{ url_for('asignacion_aleatoria_automatica', anio=anio) }}" style="display: inline;" 
+                                                          onsubmit="return confirm('¿Generar asignaciones aleatorias automáticas para {{ anio }}? Esto creará votos para todos los alumnos que no hayan votado.')">
+                                                        <button type="submit" class="btn btn-sm btn-success" title="Generar asignaciones aleatorias">
+                                                            <i class="fas fa-random me-1"></i>Auto Asignar
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                                
+                                                <!-- Segunda fila de botones de control -->
+                                                <div class="btn-group mt-1" role="group">
+                                                    <form method="POST" action="{{ url_for('resetear_trivia_curso', anio=anio) }}" style="display: inline;" 
+                                                          onsubmit="return confirm('¿Resetear solo la trivia para {{ anio }}?')">
+                                                        <button type="submit" class="btn btn-sm btn-secondary" title="Resetear solo trivia">
+                                                            <i class="fas fa-undo me-1"></i>Reset Trivia
+                                                        </button>
+                                                    </form>
+                                                    
+                                                    <form method="POST" action="{{ url_for('resetear_completo_curso', anio=anio) }}" style="display: inline;" 
+                                                          onsubmit="return confirm('⚠️ ¿RESETEO COMPLETO para {{ anio }}? Esto BORRARÁ todos los votos de la base de datos. Esta acción NO se puede deshacer.')">
+                                                        <button type="submit" class="btn btn-sm btn-danger" title="Borrar TODOS los votos y resetear trivia">
+                                                            <i class="fas fa-trash-alt me-1"></i>Reset Completo
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Gráfico de participación por año
+        const ctx = document.getElementById('chartParticipacion').getContext('2d');
+        
+        const data = {
+            labels: [{% for anio in alumnos_por_anio.keys() %}'{{ anio|title }}'{% if not loop.last %},{% endif %}{% endfor %}],
+            datasets: [{
+                data: [{% for anio, alumnos in alumnos_por_anio.items() %}
+                    {% set votos = estadisticas.votos_por_anio.get(anio, 0) %}
+                    {% set total = alumnos|length %}
+                    {% set porcentaje = (votos / total * 100) if total > 0 else 0 %}
+                    {{ "%.1f"|format(porcentaje) }}{% if not loop.last %},{% endif %}
+                {% endfor %}],
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        };
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        // Auto-refresh cada 30 segundos
+        setInterval(() => {
+            window.location.reload();
+        }, 30000);
+    </script>
+</body>
+</html>
