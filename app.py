@@ -2546,5 +2546,19 @@ def borrar_voto_individual(anio, alumno):
     
     return redirect(url_for('home', anio=anio))
 
+# --- RUTA TEMPORAL PARA INICIALIZAR TABLAS EN PRODUCCIÓN (cPanel) ---
+@app.route("/sys_admin/inicializar_db")
+def inicializar_db_web():
+    """Crea todas las tablas definidas en los modelos usando las credenciales cargadas en entorno web.
+    IMPORTANTE: Eliminar esta ruta una vez ejecutada exitosamente en producción.
+    """
+    try:
+        # Importar explícitamente el gestor ORM para acceder al engine SQLAlchemy
+        from db_models import Base, db_manager as orm_db_manager
+        Base.metadata.create_all(orm_db_manager.engine)
+        return "✅ Tablas creadas correctamente en la base de datos. Puedes eliminar esta ruta."
+    except Exception as e:
+        return f"❌ Error creando tablas: {str(e)}"
+
 if __name__ == "__main__":
     app.run(debug=True)
