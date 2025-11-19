@@ -1,4 +1,4 @@
-# Requirements for Alumnos App - Minimalista para Render
+# Requirements for Alumnos App - Producción cPanel con MySQL
 # Solo dependencias esenciales para el funcionamiento básico
 
 # Framework principal
@@ -10,13 +10,17 @@ itsdangerous==2.1.2
 click==8.1.7
 blinker==1.7.0
 
-# Servidor WSGI para producción (Render)
+# Servidor WSGI para producción
 gunicorn==21.2.0
+
+# Base de datos SQL y ORM
+SQLAlchemy==2.0.23
+pymysql==1.1.0
+python-dotenv==1.0.0
 
 # Para exportación básica de reportes (opcional)
 PyPDF2==3.0.1
 
-# Nota: SQLite está incluido en Python standard library
 # Nota: pandas y openpyxl son opcionales para exportación avanzada
 
 

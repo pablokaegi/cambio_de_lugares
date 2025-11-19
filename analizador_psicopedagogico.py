@@ -401,6 +401,144 @@ class AnalizadorPsicopedagogico:
             })
         
         return recomendaciones
+    
+    def generar_grupos_para_trabajo(self, anio: str, tamano_maximo: int = 4) -> Dict[str, Any]:
+        """
+        Algoritmo Raptor Mini (Preview): Generación Híbrida de Grupos de Trabajo
+        Combina datos de inclusión social (votos) y rendimiento académico (trivia/rankings)
+        
+        Args:
+            anio: Año escolar para generar grupos
+            tamano_maximo: Tamaño máximo de cada grupo (default 4)
+        
+        Returns:
+            Diccionario con grupos generados y metadatos del método
+        """
+        from gestor_alumnos import gestor_alumnos
+        import random
+        
+        # Obtener lista de alumnos del año
+        alumnos = gestor_alumnos.obtener_alumnos(anio)
+        
+        if not alumnos or len(alumnos) < 2:
+            return {
+                'grupos_trabajo': [],
+                'metodo': 'Raptor Mini (Preview)',
+                'error': 'Insuficientes alumnos para generar grupos'
+            }
+        
+        # Obtener datos de rankings y votos de la base de datos
+        try:
+            rankings_data = {}
+            if self.db_manager:
+                # Intentar obtener rankings desde la BD
+                from database import db_manager
+                votos = db_manager.obtener_votos_por_anio(anio)
+                
+                # Calcular métricas de popularidad y rendimiento
+                for alumno in alumnos:
+                    popularidad = 0
+                    num_votos = 0
+                    
+                    # Calcular promedio de calificaciones recibidas
+                    for votante, datos_voto in votos.items():
+                        calificaciones = datos_voto.get('calificaciones', {})
+                        if alumno in calificaciones:
+                            popularidad += calificaciones[alumno]
+                            num_votos += 1
+                    
+                    promedio = popularidad / num_votos if num_votos > 0 else 3.0
+                    
+                    rankings_data[alumno] = {
+                        'promedio_social': promedio,
+                        'votos_recibidos': num_votos,
+                        'rendimiento': promedio  # Simplificado para preview
+                    }
+            else:
+                # Fallback: asignar valores neutros
+                for alumno in alumnos:
+                    rankings_data[alumno] = {
+                        'promedio_social': 3.0,
+                        'votos_recibidos': 0,
+                        'rendimiento': 3.0
+                    }
+        except Exception as e:
+            print(f"Advertencia Raptor: No se pudieron cargar rankings, usando valores por defecto. {e}")
+            rankings_data = {alumno: {'rendimiento': 3.0, 'promedio_social': 3.0} for alumno in alumnos}
+        
+        # Clasificar alumnos por rendimiento (Alto/Medio/Bajo)
+        alumnos_ordenados = sorted(alumnos, key=lambda a: rankings_data.get(a, {}).get('rendimiento', 3.0), reverse=True)
+        
+        tercio = len(alumnos_ordenados) // 3
+        alto_rendimiento = alumnos_ordenados[:tercio] if tercio > 0 else alumnos_ordenados[:1]
+        medio_rendimiento = alumnos_ordenados[tercio:2*tercio] if tercio > 0 else []
+        bajo_rendimiento = alumnos_ordenados[2*tercio:] if tercio > 0 else alumnos_ordenados[1:]
+        
+        # Algoritmo Raptor: Balancear grupos heterogéneamente
+        grupos = []
+        alumnos_disponibles = alumnos.copy()
+        random.shuffle(alumnos_disponibles)  # Aleatorizar orden inicial
+        
+        # Estrategia: Un alumno de alto rendimiento con uno de bajo/medio
+        while alumnos_disponibles:
+            grupo_actual = []
+            
+            # Intentar agregar un alumno de alto rendimiento
+            for alumno in alto_rendimiento:
+                if alumno in alumnos_disponibles and len(grupo_actual) < tamano_maximo:
+                    grupo_actual.append(alumno)
+                    alumnos_disponibles.remove(alumno)
+                    break
+            
+            # Intentar agregar un alumno de bajo rendimiento (balance)
+            for alumno in bajo_rendimiento:
+                if alumno in alumnos_disponibles and len(grupo_actual) < tamano_maximo:
+                    grupo_actual.append(alumno)
+                    alumnos_disponibles.remove(alumno)
+                    break
+            
+            # Completar con alumnos de rendimiento medio o los que queden
+            while len(grupo_actual) < tamano_maximo and alumnos_disponibles:
+                # Priorizar alumnos de rendimiento medio
+                candidato = None
+                for alumno in medio_rendimiento:
+                    if alumno in alumnos_disponibles:
+                        candidato = alumno
+                        break
+                
+                if not candidato:
+                    candidato = alumnos_disponibles[0]
+                
+                grupo_actual.append(candidato)
+                alumnos_disponibles.remove(candidato)
+            
+            if grupo_actual:
+                # Calcular métricas del grupo
+                promedio_rendimiento = statistics.mean([
+                    rankings_data.get(a, {}).get('rendimiento', 3.0) for a in grupo_actual
+                ])
+                
+                grupos.append({
+                    'miembros': grupo_actual,
+                    'tamaño': len(grupo_actual),
+                    'balance_rendimiento': round(promedio_rendimiento, 2),
+                    'heterogeneidad': 'alta' if len(set([
+                        'alto' if a in alto_rendimiento else 'medio' if a in medio_rendimiento else 'bajo'
+                        for a in grupo_actual
+                    ])) > 1 else 'baja'
+                })
+        
+        return {
+            'grupos_trabajo': grupos,
+            'metodo': 'Raptor Mini (Preview)',
+            'total_grupos': len(grupos),
+            'criterios': [
+                'Balance de rendimiento académico',
+                'Inclusión de alumnos de bajo rendimiento con tutores naturales',
+                'Heterogeneidad controlada'
+            ],
+            'fecha_generacion': datetime.now().isoformat()
+        }
 
 # Instancia global del analizador
 analizador_psicopedagogico = AnalizadorPsicopedagogico()
