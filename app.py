@@ -2579,21 +2579,40 @@ def inicializar_db_web():
 @app.route("/sys_admin/diagnostico_db")
 def diagnostico_db():
     try:
-        import os, traceback
-        from db_models import DATABASE_URL, db_manager as orm_db_manager, Base
+        import os, traceback, importlib
+        from sqlalchemy import text, inspect
+        from db_models import DATABASE_URL, db_manager as orm_db_manager
         detalles = []
         detalles.append(f"DATABASE_URL={DATABASE_URL}")
-        detalles.append(f"Engine={orm_db_manager.engine}")
-        detalles.append(f"Driver module disponible pymysql={'pymysql' in globals() or 'pymysql' in dir(__builtins__)}")
-        # Intentar inspección de tablas
+        detalles.append(f"CWD={os.getcwd()}")
+        detalles.append(f"__file__={__file__}")
+        detalles.append(f"Engine class={orm_db_manager.engine.__class__.__name__}")
+        # Driver pymysql
         try:
-            tablas = orm_db_manager.engine.table_names() if hasattr(orm_db_manager.engine, 'table_names') else []
-        except Exception:
-            tablas = ['(no disponible)']
-        detalles.append(f"Tablas existentes={tablas}")
+            pymysql_mod = importlib.import_module('pymysql')
+            detalles.append(f"pymysql_version={getattr(pymysql_mod, '__version__', 'desconocida')}")
+        except Exception as e:
+            detalles.append(f"pymysql_import_error={type(e).__name__}: {e}")
+        # Probar conexión simple
+        try:
+            with orm_db_manager.engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+                detalles.append("Test SELECT 1=OK")
+        except Exception as e:
+            detalles.append(f"Test SELECT 1 ERROR: {type(e).__name__}: {e}")
+        # Listar tablas (SQLAlchemy 2.x via inspect)
+        try:
+            inspector = inspect(orm_db_manager.engine)
+            tablas = inspector.get_table_names()
+            detalles.append(f"Tablas={tablas if tablas else '[]'}")
+        except Exception as e:
+            detalles.append(f"Inspector ERROR: {type(e).__name__}: {e}")
+        # Variables de entorno relevantes
+        for var in ["PYTHONPATH", "PATH", "HOME"]:
+            detalles.append(f"ENV {var}={os.environ.get(var,'(no)')}")
         return "\n".join(detalles)
     except Exception as e:
-        return f"❌ Diagnóstico falló: {type(e).__name__}: {str(e)}"
+        return f"❌ Diagnóstico falló: {type(e).__name__}: {e}"
 
 if __name__ == "__main__":
     app.run(debug=True)

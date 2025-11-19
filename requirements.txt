@@ -13,8 +13,9 @@ blinker==1.7.0
 # Servidor WSGI para producción
 gunicorn==21.2.0
 
-# Base de datos SQL y ORM
-SQLAlchemy==2.0.23
+# Base de datos SQL y ORM (actualizado para compatibilidad Python 3.13)
+# Versiones previas (<2.0.30) generan AssertionError con typing internals en 3.13
+SQLAlchemy==2.0.36
 pymysql==1.1.0
 python-dotenv==1.0.0
 
