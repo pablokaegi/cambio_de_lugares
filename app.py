@@ -2555,10 +2555,45 @@ def inicializar_db_web():
     try:
         # Importar explícitamente el gestor ORM para acceder al engine SQLAlchemy
         from db_models import Base, db_manager as orm_db_manager
+        import traceback, os
+        # Log inicial
+        log_path = os.path.join(os.path.dirname(__file__), 'init_db_log.txt')
+        with open(log_path, 'a', encoding='utf-8') as f:
+            f.write(f"\n--- Intento creación tablas {datetime.now().isoformat()} ---\n")
+            f.write(f"DATABASE_URL={os.environ.get('DATABASE_URL','(no definida)')}\n")
+        
         Base.metadata.create_all(orm_db_manager.engine)
+        with open(log_path, 'a', encoding='utf-8') as f:
+            f.write("OK: Tablas creadas sin excepción.\n")
         return "✅ Tablas creadas correctamente en la base de datos. Puedes eliminar esta ruta."
     except Exception as e:
-        return f"❌ Error creando tablas: {str(e)}"
+        import traceback, os
+        log_path = os.path.join(os.path.dirname(__file__), 'init_db_log.txt')
+        with open(log_path, 'a', encoding='utf-8') as f:
+            f.write("ERROR: Excepción durante creación de tablas\n")
+            f.write(str(e) + "\n")
+            f.write(traceback.format_exc() + "\n")
+        return f"❌ Error creando tablas: {type(e).__name__}: {str(e)} (ver init_db_log.txt)"
+
+# Ruta de diagnóstico para revisar entorno y acceso a ORM
+@app.route("/sys_admin/diagnostico_db")
+def diagnostico_db():
+    try:
+        import os, traceback
+        from db_models import DATABASE_URL, db_manager as orm_db_manager, Base
+        detalles = []
+        detalles.append(f"DATABASE_URL={DATABASE_URL}")
+        detalles.append(f"Engine={orm_db_manager.engine}")
+        detalles.append(f"Driver module disponible pymysql={'pymysql' in globals() or 'pymysql' in dir(__builtins__)}")
+        # Intentar inspección de tablas
+        try:
+            tablas = orm_db_manager.engine.table_names() if hasattr(orm_db_manager.engine, 'table_names') else []
+        except Exception:
+            tablas = ['(no disponible)']
+        detalles.append(f"Tablas existentes={tablas}")
+        return "\n".join(detalles)
+    except Exception as e:
+        return f"❌ Diagnóstico falló: {type(e).__name__}: {str(e)}"
 
 if __name__ == "__main__":
     app.run(debug=True)
