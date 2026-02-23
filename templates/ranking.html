@@ -195,11 +195,9 @@
                     <div class="col-md-6">
                         <h6>🎯 Ganar Puntos:</h6>
                         <ul class="mb-0">
-                            <li><strong>+10 puntos</strong> por votar</li>
-                            <li><strong>+2 puntos</strong> por cada valor diferente usado (1-5)</li>
-                            <li><strong>+5 puntos</strong> bonus por usar rango completo</li>
-                            <li><strong>+3 puntos</strong> por votar en la mañana (8am-12pm)</li>
-                            <li><strong>+2 puntos</strong> por votar en la tarde (1pm-5pm)</li>
+                            <li><strong>+50 puntos</strong> por completar la votación</li>
+                            <li><strong>+10-20 puntos</strong> por usar valores variados (1-5)</li>
+                            <li><strong>+5 puntos</strong> bonus por no bloquear a ningún compañero</li>
                         </ul>
                     </div>
                     <div class="col-md-6">
@@ -297,8 +295,10 @@
                             <div class="trivia-stats" style="font-size: 0.8rem; margin-top: 5px;">
                                 {% if stats.trivia_stats %}
                                 <div style="color: #6c757d;">
-                                    🧠 Trivia: {{stats.trivia_stats.preguntas_correctas}}/{{stats.trivia_stats.preguntas_respondidas}} 
-                                    ({{((stats.trivia_stats.preguntas_correctas / stats.trivia_stats.preguntas_respondidas) * 100)|round(0)}}%)
+                                    {% set respondidas = stats.trivia_stats.preguntas_respondidas %}
+                                    {% set correctas = stats.trivia_stats.preguntas_correctas %}
+                                    🧠 Trivia: {{correctas}}/{{respondidas}}
+                                    ({{ ((correctas / respondidas * 100) if respondidas > 0 else 0)|round(0)|int }}%)
                                     
                                     {% if stats.trivia_stats.mejor_racha > 0 %}
                                     | 🔥 Mejor racha: {{stats.trivia_stats.mejor_racha}}

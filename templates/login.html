@@ -32,10 +32,17 @@
             border-bottom: 3px solid #2c5aa0;
         }
         
+        .logo-section img {
+            max-width: 250px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+        
         .logo-section h1 {
             color: #2c5aa0;
             font-weight: bold;
             margin-bottom: 10px;
+            font-size: 1.8rem;
         }
         
         .form-floating {
@@ -93,8 +100,8 @@
 <body>
     <div class="login-container">
         <div class="logo-section">
-            <h1><i class="fas fa-school me-2"></i>Instituto Puertas del Sol</h1>
-            <p class="text-muted mb-0">Sistema de Emparejamiento de Alumnos</p>
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Instituto Puertas del Sol">
+            <h1 style="font-size: 1.5rem; color: #2c5aa0; font-weight: 600;">Agrupamientos 1.0</h1>
         </div>
         
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -125,20 +132,28 @@
         </form>
         
         <div class="role-badge">
-            <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>Usuarios de Ejemplo:</h6>
+            <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>Roles disponibles:</h6>
             <div class="role-item">
-                <span><strong>Administrador:</strong></span>
-                <span>admin / admin123</span>
+                <span><i class="fas fa-user-shield me-1 text-primary"></i><strong>Administrador</strong></span>
             </div>
             <div class="role-item">
-                <span><strong>Psicopedagogo:</strong></span>
-                <span>psicopedagogo1 / psico123</span>
+                <span><i class="fas fa-brain me-1 text-success"></i><strong>Psicopedagogo</strong></span>
             </div>
             <div class="role-item">
-                <span><strong>Profesor:</strong></span>
-                <span>profesor1 / prof2024</span>
+                <span><i class="fas fa-chalkboard-teacher me-1 text-warning"></i><strong>Profesor</strong></span>
             </div>
         </div>
+    </div>
+    
+    <!-- Logo AulaGo en esquina inferior izquierda -->
+    <div style="position:fixed; left:30px; bottom:60px; z-index:50; display:flex; align-items:center; gap:8px;">
+        <span style="color:#fff; font-weight:700; font-size:0.85rem; text-shadow:0 1px 3px rgba(0,0,0,0.5);">By</span>
+        <img src="{{ url_for('static', filename='aulago.png') }}" alt="AulaGo" style="height:70px; width:auto; filter:drop-shadow(0 2px 8px rgba(0,0,0,0.5));">
+    </div>
+    
+    <!-- Footer -->
+    <div style="position:fixed; left:0; bottom:0; right:0; text-align:center; padding:10px; background:rgba(0,0,0,0.2); color:#fff; font-size:0.75rem; z-index:40;">
+        Developed by AulaGo 2025 | Oncativo, Córdoba
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>

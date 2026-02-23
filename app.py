@@ -6,6 +6,9 @@ import math
 from functools import wraps
 from collections import Counter, defaultdict
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Importar el manejador de base de datos
 from database import db_manager
@@ -16,7 +19,7 @@ from gestor_alumnos import gestor_alumnos, obtener_alumnos_por_anio
 from analizador_psicopedagogico import analizador_psicopedagogico
 
 app = Flask(__name__)
-app.secret_key = 'puertas_del_sol_secret_key_2024'
+app.secret_key = os.environ.get('SECRET_KEY', 'puertas_del_sol_secret_key_2024')
 
 # Configurar el analizador psicopedagógico con la base de datos
 analizador_psicopedagogico.db_manager = db_manager
@@ -696,7 +699,7 @@ def procesar_voto():
             return redirect(url_for('votar', nombre=nombre, anio=anio))
         
         # Guardar voto usando base de datos
-        timestamp_actual = str(os.times().elapsed)
+        timestamp_actual = datetime.now().isoformat()
         
         # Guardar en base de datos
         db_success = db_manager.guardar_voto(
@@ -2548,6 +2551,7 @@ def borrar_voto_individual(anio, alumno):
 
 # --- RUTA TEMPORAL PARA INICIALIZAR TABLAS EN PRODUCCIÓN (cPanel) ---
 @app.route("/sys_admin/inicializar_db")
+@role_required('administrador')
 def inicializar_db_web():
     """Crea todas las tablas definidas en los modelos usando las credenciales cargadas en entorno web.
     IMPORTANTE: Eliminar esta ruta una vez ejecutada exitosamente en producción.
@@ -2577,6 +2581,7 @@ def inicializar_db_web():
 
 # Ruta de diagnóstico para revisar entorno y acceso a ORM
 @app.route("/sys_admin/diagnostico_db")
+@role_required('administrador')
 def diagnostico_db():
     try:
         import os, traceback, importlib

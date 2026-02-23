@@ -114,13 +114,26 @@ class DatabaseManager:
                     fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
-            
+
+            # Tabla para encuesta de conformidad post-asignación
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS conformidad (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    alumno TEXT NOT NULL,
+                    companero TEXT NOT NULL,
+                    puntaje INTEGER NOT NULL CHECK(puntaje BETWEEN 1 AND 5),
+                    metodo TEXT DEFAULT 'afinidad',
+                    timestamp TEXT NOT NULL,
+                    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
             conn.commit()
     
     def guardar_voto(self, anio, alumno, calificaciones, alumno_bloqueado=None, timestamp=None):
         """Guarda un voto en la base de datos"""
         if timestamp is None:
-            timestamp = str(os.times().elapsed)
+            timestamp = datetime.now().isoformat()
             
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()

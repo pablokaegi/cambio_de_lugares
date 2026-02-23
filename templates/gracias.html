@@ -2,14 +2,70 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>¡Gracias por votar!</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <meta http-equiv="refresh" content="2;url=/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡Gracias por votar! - Instituto Puertas del Sol</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .gracias-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            padding: 50px 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        .icon-success { font-size: 4rem; color: #28a745; margin-bottom: 20px; }
+        .btn-home {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        .btn-home:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102,126,234,0.4);
+            color: white;
+        }
+    </style>
 </head>
 <body>
-    <h1>¡Gracias, {{ nombre }}!</h1>
-    <p>Tu voto fue registrado correctamente.<br>Serás redirigido al inicio en unos segundos...</p>
-    <a href="/">Volver al inicio</a>
-    <a href="/resultados">Ver resultados</a>
+    <div class="gracias-card">
+        <div class="icon-success"><i class="fas fa-check-circle"></i></div>
+        <h2 style="color: #2c3e50; font-weight: 700;">¡Gracias, {{ nombre }}!</h2>
+        <p class="lead text-muted">Tu voto fue registrado correctamente.</p>
+        <p class="text-muted">Serás redirigido al inicio en unos momentos…</p>
+        <div class="mt-4">
+            <a href="{{ url_for('index') }}" class="btn-home">
+                <i class="fas fa-home me-2"></i>Ir al inicio
+            </a>
+        </div>
+        <p class="mt-3" style="font-size:0.85rem; color:#6c757d;">
+            Redirigiendo en <strong id="cntNum">3</strong> segundos…
+        </p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let n = 3;
+        const el = document.getElementById('cntNum');
+        const t = setInterval(() => {
+            n--;
+            if (el) el.textContent = n;
+            if (n <= 0) { clearInterval(t); window.location.href = '{{ url_for("index") }}'; }
+        }, 1000);
+    </script>
 </body>
 </html>

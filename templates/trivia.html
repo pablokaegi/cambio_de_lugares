@@ -148,15 +148,10 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
         
+        /* Timer warning: gentle instead of aggressive red pulse */
         .timer-warning {
-            color: #dc3545 !important;
-            animation: pulse 1s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+            color: #e67e22 !important;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -174,7 +169,7 @@
 
             <!-- Timer -->
             <div class="timer-container">
-                <div class="timer-display" id="timer">⏰ 60</div>
+                <div class="timer-display" id="timer">⏰ 90</div>
                 <p class="text-muted">Tiempo restante para responder</p>
             </div>
 
@@ -217,9 +212,9 @@
     </div>
 
     <script>
-        let tiempoRestante = 60;
+        let tiempoRestante = 90;
         let timerInterval;
-        let respuestaSeleccionada = false;
+        let formularioEnviado = false;
         
         // Iniciar timer
         function iniciarTimer() {
@@ -228,7 +223,7 @@
                 const timerDisplay = document.getElementById('timer');
                 timerDisplay.textContent = `⏰ ${tiempoRestante}`;
                 
-                if (tiempoRestante <= 10) {
+                if (tiempoRestante <= 30) {
                     timerDisplay.classList.add('timer-warning');
                 }
                 
@@ -241,31 +236,24 @@
         }
         
         function seleccionarOpcion(indice) {
-            if (respuestaSeleccionada) return;
-            
-            // Remover selección anterior
+            // Permite cambiar la respuesta hasta confirmar
             document.querySelectorAll('.opcion-item').forEach(item => {
                 item.classList.remove('selected');
             });
             
-            // Seleccionar nueva opción
             const opcionSeleccionada = document.querySelectorAll('.opcion-item')[indice];
             opcionSeleccionada.classList.add('selected');
             
-            // Marcar radio button
             const radioButton = opcionSeleccionada.querySelector('input[type="radio"]');
             radioButton.checked = true;
             
-            // Habilitar botón confirmar
             document.getElementById('btnConfirmar').disabled = false;
-            
-            respuestaSeleccionada = true;
         }
         
         // Manejar envío del formulario
         document.getElementById('triviaForm').addEventListener('submit', function(e) {
             clearInterval(timerInterval);
-            respuestaSeleccionada = true;
+            formularioEnviado = true;
         });
         
         // Iniciar timer al cargar la página
@@ -273,7 +261,7 @@
         
         // Prevenir refresh accidental
         window.addEventListener('beforeunload', function(e) {
-            if (!respuestaSeleccionada && tiempoRestante > 0) {
+            if (!formularioEnviado && tiempoRestante > 0) {
                 e.preventDefault();
                 e.returnValue = '¿Estás seguro de salir? Perderás tu progreso en la trivia.';
             }

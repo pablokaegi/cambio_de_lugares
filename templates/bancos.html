@@ -170,7 +170,7 @@
             gap: 15px;
             padding: 30px;
             justify-content: center;
-            grid-template-columns: repeat({{ cols }}, 1fr);
+            grid-template-columns: repeat({{ cols or 6 }}, 1fr);
             max-width: 800px;
             margin: 0 auto;
         }
@@ -497,7 +497,7 @@
     <script>
         function regenerarAsignacion() {
             if (confirm('¿Deseas generar una nueva distribución aleatoria de los bancos?')) {
-                window.location.href = '/asignacion_bancos?anio={{ anio }}&regenerar=true';
+                window.location.href = '{{ url_for("asignacion_bancos", anio=anio, regenerar="true") }}';
             }
         }
         
