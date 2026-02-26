@@ -444,6 +444,53 @@ def diag():
     info['python_version'] = sys.version
     return jsonify(info)
 
+@app.route("/test_vote/<anio>")
+def test_vote(anio):
+    """Test completo: inserta un voto de prueba, lo lee, lo borra. Sin login."""
+    from flask import jsonify
+    import traceback
+    result = {'anio': anio, 'steps': []}
+
+    alumnos_act = obtener_alumnos_por_anio()
+    if anio not in alumnos_act or len(alumnos_act[anio]) < 3:
+        return jsonify({'error': f'Año {anio} no encontrado o sin suficientes alumnos'}), 400
+
+    test_alumno = '__TEST_VOTE__'
+    test_ratings = {alumnos_act[anio][0]: 5, alumnos_act[anio][1]: 3}
+    test_ts = datetime.now().isoformat()
+
+    # Step 1: guardar voto
+    try:
+        ok = db_manager.guardar_voto(anio, test_alumno, test_ratings, None, test_ts)
+        result['steps'].append({'guardar_voto': ok})
+    except Exception as e:
+        result['steps'].append({'guardar_voto': f'EXCEPTION: {e}', 'tb': traceback.format_exc()})
+        return jsonify(result), 500
+
+    # Step 2: leer voto
+    try:
+        votos = db_manager.obtener_votos_por_anio(anio)
+        found = test_alumno in votos
+        result['steps'].append({'leer_voto': found, 'voto_data': votos.get(test_alumno, 'NOT FOUND')})
+    except Exception as e:
+        result['steps'].append({'leer_voto': f'EXCEPTION: {e}'})
+
+    # Step 3: borrar voto de prueba
+    try:
+        with db_manager._connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute(db_manager._ph('DELETE FROM votos WHERE anio = ? AND alumno = ?'),
+                           (anio, test_alumno))
+            result['steps'].append({'borrar_voto': 'OK'})
+    except Exception as e:
+        result['steps'].append({'borrar_voto': f'EXCEPTION: {e}'})
+
+    result['conclusion'] = 'DB write/read/delete OK' if all(
+        s.get('guardar_voto') is True or s.get('leer_voto') is True or s.get('borrar_voto') == 'OK'
+        for s in result['steps']
+    ) else 'ALGO FALLO'
+    return jsonify(result)
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if 'logged_in' in session:

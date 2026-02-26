@@ -271,7 +271,7 @@
                 {% endif %}
             {% endwith %}
             
-            <form method="post" id="votingForm">
+            <form method="post" action="{{ url_for('votar', anio=anio, nombre=nombre) }}" id="votingForm">
                 <!-- Instrucciones -->
                 <div class="instructions">
                     <h4 class="mb-3">
@@ -466,6 +466,7 @@
 
         // ── Validación final al enviar ────────────────────────────────
         document.getElementById('votingForm').addEventListener('submit', function(e) {
+            console.log('[VOTAR] Submit clicked. ratings=', JSON.stringify(ratings));
             const ratedCount = Object.keys(ratings).length;
             if (ratedCount !== totalStudents) {
                 e.preventDefault();
@@ -478,6 +479,22 @@
                 alert('No puedes calificar a todos con la puntuación mínima');
                 return false;
             }
+            // Verificar que los hidden inputs tengan valores
+            var hiddens = document.querySelectorAll('.rating-hidden');
+            var emptyCount = 0;
+            hiddens.forEach(function(h) {
+                console.log('[VOTAR] hidden', h.name, '=', h.value);
+                if (!h.value) emptyCount++;
+            });
+            if (emptyCount > 0) {
+                e.preventDefault();
+                alert('ERROR: ' + emptyCount + ' campos ocultos vacíos. Intenta calificar de nuevo.');
+                return false;
+            }
+            // Deshabilitar botón para evitar doble click
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
+            console.log('[VOTAR] Form submitting...');
             return true;
         });
 
