@@ -357,9 +357,8 @@
                                 {% for rating in range(1, 6) %}
                                 <button type="button" 
                                         class="rating-btn rating-{{ rating }}" 
-                                        data-student="{{ alumno }}" 
-                                        data-rating="{{ rating }}"
-                                        onclick="setRating('{{ alumno }}', {{ rating }})">
+                                        data-student="{{ alumno | e }}" 
+                                        data-rating="{{ rating }}">
                                     {{ rating }}
                                 </button>
                                 {% endfor %}
@@ -371,16 +370,16 @@
                                 <input type="checkbox" 
                                        class="form-check-input block-checkbox" 
                                        name="bloqueado" 
-                                       value="{{ alumno }}" 
+                                       value="{{ alumno | e }}" 
                                        id="block_{{ loop.index }}"
-                                       onchange="toggleBlock('{{ alumno }}')">
+                                       data-student="{{ alumno | e }}">
                                 <i class="fas fa-ban text-danger me-1"></i>
                                 Prefiero que el sistema no nos asigne juntos esta vez
                             </label>
                         </div>
                         
                         <!-- Campo oculto para el rating -->
-                        <input type="hidden" name="rating_{{ alumno }}" id="rating_{{ alumno }}" value="">
+                        <input type="hidden" name="rating_{{ alumno | e }}" data-student="{{ alumno | e }}" class="rating-hidden" value="">
                     </div>
                     {% endfor %}
                 </div>
@@ -397,60 +396,62 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let ratings = {};
-        let blockedStudent = null;
         let totalStudents = {{ alumnos|length }};
-        
-        function setRating(student, rating) {
+
+        // ── Event delegation: rating buttons ──────────────────────────
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.rating-btn[data-student][data-rating]');
+            if (!btn) return;
+
+            const student = btn.dataset.student;
+            const rating  = parseInt(btn.dataset.rating, 10);
+
             // Limpiar selección anterior para este estudiante
-            document.querySelectorAll(`[data-student="${student}"][data-rating]`).forEach(btn => {
-                btn.classList.remove('selected');
+            document.querySelectorAll('.rating-btn[data-student]').forEach(function(b) {
+                if (b.dataset.student === student) b.classList.remove('selected');
             });
-            
+
             // Marcar nueva selección
-            document.querySelector(`[data-student="${student}"][data-rating="${rating}"]`).classList.add('selected');
-            
-            // Guardar rating
+            btn.classList.add('selected');
+
+            // Guardar rating en el campo oculto
             ratings[student] = rating;
-            document.getElementById(`rating_${student}`).value = rating;
-            
+            document.querySelectorAll('.rating-hidden[data-student]').forEach(function(inp) {
+                if (inp.dataset.student === student) inp.value = rating;
+            });
+
             updateProgress();
             validateForm();
-        }
-        
-        function toggleBlock(student) {
-            const checkbox = document.querySelector(`input[value="${student}"]`);
-            
-            if (checkbox.checked) {
-                // Desmarcar otros checkboxes
-                document.querySelectorAll('input[name="bloqueado"]').forEach(cb => {
-                    if (cb !== checkbox) {
-                        cb.checked = false;
-                    }
+        });
+
+        // ── Event delegation: block checkboxes ───────────────────────
+        document.addEventListener('change', function(e) {
+            const cb = e.target.closest('.block-checkbox[data-student]');
+            if (!cb) return;
+
+            if (cb.checked) {
+                document.querySelectorAll('.block-checkbox[data-student]').forEach(function(other) {
+                    if (other !== cb) other.checked = false;
                 });
-                blockedStudent = student;
-            } else {
-                blockedStudent = null;
             }
-        }
-        
+        });
+
+        // ── Progreso ─────────────────────────────────────────────────
         function updateProgress() {
             const ratedCount = Object.keys(ratings).length;
             const percentage = (ratedCount / totalStudents) * 100;
-            
             document.getElementById('progressBar').style.width = percentage + '%';
             document.getElementById('progressBar').textContent = Math.round(percentage) + '% completado';
-            document.getElementById('progressText').textContent = `${ratedCount} de ${totalStudents} compañeros evaluados`;
+            document.getElementById('progressText').textContent = ratedCount + ' de ' + totalStudents + ' compañeros evaluados';
         }
-        
+
+        // ── Validación del botón submit ───────────────────────────────
         function validateForm() {
             const ratedCount = Object.keys(ratings).length;
-            const allRated = ratedCount === totalStudents;
-            
-            // Verificar que no todos tengan rating 1
-            const allMinimum = Object.values(ratings).every(r => r == 1);
-            
-            const submitBtn = document.getElementById('submitBtn');
-            
+            const allRated   = ratedCount === totalStudents;
+            const allMinimum = allRated && Object.values(ratings).every(function(r) { return r == 1; });
+            const submitBtn  = document.getElementById('submitBtn');
+
             if (allRated && !allMinimum) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Enviar Evaluación';
@@ -462,27 +463,24 @@
                 submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Enviar Evaluación';
             }
         }
-        
-        // Validación final
+
+        // ── Validación final al enviar ────────────────────────────────
         document.getElementById('votingForm').addEventListener('submit', function(e) {
             const ratedCount = Object.keys(ratings).length;
-            
             if (ratedCount !== totalStudents) {
                 e.preventDefault();
                 alert('Debes evaluar a todos los compañeros asignados');
                 return false;
             }
-            
-            const allMinimum = Object.values(ratings).every(r => r == 1);
+            const allMinimum = Object.values(ratings).every(function(r) { return r == 1; });
             if (allMinimum) {
                 e.preventDefault();
                 alert('No puedes calificar a todos con la puntuación mínima');
                 return false;
             }
-            
             return true;
         });
-        
+
         // Inicializar
         updateProgress();
     </script>
