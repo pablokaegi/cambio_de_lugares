@@ -24,17 +24,9 @@ app.secret_key = os.environ.get('SECRET_KEY', 'puertas_del_sol_secret_key_2024')
 # Configurar el analizador psicopedagógico con la base de datos
 analizador_psicopedagogico.db_manager = db_manager
 
-# 1. PRIMERO: Usuarios base (sin cargar archivo aún)
-USUARIOS_DOCENTES = {
-    'admin': {'password': 'admin123', 'rol': 'administrador'},
-    'director': {'password': 'director2024', 'rol': 'administrador'},
-    'coordinador': {'password': 'coord123', 'rol': 'administrador'},
-    'psicopedagogo1': {'password': 'psico123', 'rol': 'psicopedagogo'},
-    'psicopedagogo2': {'password': 'psico456', 'rol': 'psicopedagogo'},
-    'profesor1': {'password': 'prof2024', 'rol': 'profesor'},
-    'profesor2': {'password': 'prof456', 'rol': 'profesor'},
-    'secretaria': {'password': 'secre123', 'rol': 'profesor'}
-}
+# 1. PRIMERO: Usuarios base — se cargan desde usuarios.json (ver .gitignore)
+# Las contraseñas NO deben estar en el código fuente.
+USUARIOS_DOCENTES = {}
 
 # 2. SEGUNDO: Definir las funciones helper
 def cargar_json_seguro(archivo):
@@ -304,10 +296,14 @@ def otorgar_badges_trivia(alumno_stats, datos_trivia):
         badges_nuevos.append("⭐ Excelencia Académica")
     
     return badges_nuevos
-# 3. TERCERO: AHORA SÍ cargar usuarios adicionales
+# 3. TERCERO: Cargar usuarios desde archivo externo (nunca hardcodeados en el código)
 usuarios_archivo = cargar_json_seguro('usuarios.json')
 if usuarios_archivo:
     USUARIOS_DOCENTES.update(usuarios_archivo)
+else:
+    print("[ADVERTENCIA] usuarios.json no encontrado o vacío. No hay usuarios cargados.")
+    print("[ADVERTENCIA] Creá usuarios.json con el formato: {'usuario': {'password': '...', 'rol': '...'}}")
+    print("[ADVERTENCIA] Roles válidos: administrador, psicopedagogo, profesor")
 
 # 4. CUARTO: Resto de tu código (decoradores, alumnos, etc.)
 def login_required(f):

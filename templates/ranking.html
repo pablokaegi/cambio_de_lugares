@@ -243,10 +243,11 @@
             <!-- Podium Top 3 -->
             {% if ranking_ordenado|length >= 3 %}
             <div class="podium">
+                {% set mostrar_nombres = session.rol in ['administrador', 'psicopedagogo'] %}
                 <!-- 2do Lugar -->
                 <div class="podium-place podium-2nd">
                     <div style="font-size: 2rem;">🥈</div>
-                    <strong>{{ranking_ordenado[1][0][:15]}}</strong>
+                    <strong>{% if mostrar_nombres %}{{ranking_ordenado[1][0][:15]}}{% else %}2° lugar{% endif %}</strong>
                     <div>{{ranking_ordenado[1][1]['puntos_totales']}} pts</div>
                     <div class="nivel-badge">Nivel {{ranking_ordenado[1][1]['nivel']}}</div>
                 </div>
@@ -254,7 +255,7 @@
                 <!-- 1er Lugar -->
                 <div class="podium-place podium-1st">
                     <div style="font-size: 2.5rem;">👑</div>
-                    <strong>{{ranking_ordenado[0][0][:15]}}</strong>
+                    <strong>{% if mostrar_nombres %}{{ranking_ordenado[0][0][:15]}}{% else %}1° lugar{% endif %}</strong>
                     <div>{{ranking_ordenado[0][1]['puntos_totales']}} pts</div>
                     <div class="nivel-badge">Nivel {{ranking_ordenado[0][1]['nivel']}}</div>
                 </div>
@@ -262,7 +263,7 @@
                 <!-- 3er Lugar -->
                 <div class="podium-place podium-3rd">
                     <div style="font-size: 2rem;">🥉</div>
-                    <strong>{{ranking_ordenado[2][0][:15]}}</strong>
+                    <strong>{% if mostrar_nombres %}{{ranking_ordenado[2][0][:15]}}{% else %}3° lugar{% endif %}</strong>
                     <div>{{ranking_ordenado[2][1]['puntos_totales']}} pts</div>
                     <div class="nivel-badge">Nivel {{ranking_ordenado[2][1]['nivel']}}</div>
                 </div>
@@ -274,12 +275,13 @@
                 <h4><i class="fas fa-list"></i> Clasificación Completa</h4>
                 
                 {% if ranking_ordenado %}
+                    {% set mostrar_nombres = session.rol in ['administrador', 'psicopedagogo'] %}
                     {% for alumno, stats in ranking_ordenado %}
                     <div class="ranking-item">
                         <div class="ranking-position">{{loop.index}}</div>
                         
                         <div class="alumno-info">
-                            <div class="alumno-nombre">{{alumno}}</div>
+                            <div class="alumno-nombre">{% if mostrar_nombres %}{{alumno}}{% else %}Alumno #{{loop.index}}{% endif %}</div>
                             <div class="alumno-stats">
                                 Votó el: {{stats.fecha_ultimo_voto[:10] if stats.fecha_ultimo_voto else 'No ha votado'}}
                             </div>
