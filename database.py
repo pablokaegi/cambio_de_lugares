@@ -111,15 +111,23 @@ class DatabaseManager:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     filas INTEGER NOT NULL DEFAULT 6,
                     columnas INTEGER NOT NULL DEFAULT 6,
-                    trivia_obligatoria BOOLEAN DEFAULT TRUE,
+                    trivia_obligatoria BOOLEAN DEFAULT FALSE,
                     configuracion_json TEXT,
                     fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
 
+            # Tabla de control de migraciones (una sola vez)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS db_migrations (
+                    migration_id TEXT PRIMARY KEY,
+                    applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
             # Migraciones para bases de datos existentes (columnas nuevas)
             try:
-                cursor.execute('ALTER TABLE configuracion_aula ADD COLUMN trivia_obligatoria BOOLEAN DEFAULT TRUE')
+                cursor.execute('ALTER TABLE configuracion_aula ADD COLUMN trivia_obligatoria BOOLEAN DEFAULT FALSE')
             except sqlite3.OperationalError:
                 pass  # Columna ya existe
 
@@ -127,6 +135,12 @@ class DatabaseManager:
                 cursor.execute('ALTER TABLE configuracion_aula ADD COLUMN configuracion_json TEXT')
             except sqlite3.OperationalError:
                 pass  # Columna ya existe
+
+            # Migración única: corregir DEFAULT TRUE incorrecto que dejó trivia=1 en filas existentes
+            cursor.execute("SELECT COUNT(*) FROM db_migrations WHERE migration_id = 'fix_trivia_default_false'")
+            if cursor.fetchone()[0] == 0:
+                cursor.execute('UPDATE configuracion_aula SET trivia_obligatoria = 0 WHERE trivia_obligatoria = 1')
+                cursor.execute("INSERT INTO db_migrations (migration_id) VALUES ('fix_trivia_default_false')")
 
             # Tabla para encuesta de conformidad post-asignación
             cursor.execute('''
@@ -423,7 +437,7 @@ class DatabaseManager:
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         filas INTEGER,
                         columnas INTEGER,
-                        trivia_obligatoria BOOLEAN DEFAULT TRUE,
+                        trivia_obligatoria BOOLEAN DEFAULT FALSE,
                         configuracion_json TEXT,
                         fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP
                     )
@@ -438,7 +452,7 @@ class DatabaseManager:
                 ''', (
                     config_dict.get('filas_maximas', 6),
                     config_dict.get('columnas_por_fila', 6), 
-                    config_dict.get('trivia_obligatoria', True),
+                    config_dict.get('trivia_obligatoria', False),
                     json.dumps(config_dict)
                 ))
                 conn.commit()
@@ -458,7 +472,7 @@ class DatabaseManager:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     filas INTEGER,
                     columnas INTEGER,
-                    trivia_obligatoria BOOLEAN DEFAULT TRUE,
+                    trivia_obligatoria BOOLEAN DEFAULT FALSE,
                     configuracion_json TEXT,
                     fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP
                 )

@@ -451,7 +451,7 @@ def votar(anio, nombre):
         
         # ✅ VERIFICAR si la trivia es obligatoria antes de mostrarla
         config_aula = db_manager.cargar_configuracion_aula()
-        trivia_obligatoria = config_aula.get('trivia_obligatoria', True)
+        trivia_obligatoria = config_aula.get('trivia_obligatoria', False)
         
         if trivia_obligatoria and not session.get(f'trivia_completada_{anio}_{nombre}', False):
             return redirect(url_for('trivia_educativa', anio=anio, nombre=nombre))
