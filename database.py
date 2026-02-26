@@ -109,11 +109,24 @@ class DatabaseManager:
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS configuracion_aula (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    filas INTEGER NOT NULL,
-                    columnas INTEGER NOT NULL,
+                    filas INTEGER NOT NULL DEFAULT 6,
+                    columnas INTEGER NOT NULL DEFAULT 6,
+                    trivia_obligatoria BOOLEAN DEFAULT TRUE,
+                    configuracion_json TEXT,
                     fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
+
+            # Migraciones para bases de datos existentes (columnas nuevas)
+            try:
+                cursor.execute('ALTER TABLE configuracion_aula ADD COLUMN trivia_obligatoria BOOLEAN DEFAULT TRUE')
+            except sqlite3.OperationalError:
+                pass  # Columna ya existe
+
+            try:
+                cursor.execute('ALTER TABLE configuracion_aula ADD COLUMN configuracion_json TEXT')
+            except sqlite3.OperationalError:
+                pass  # Columna ya existe
 
             # Tabla para encuesta de conformidad post-asignación
             cursor.execute('''
