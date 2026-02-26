@@ -448,6 +448,9 @@ def diag():
 def test_votar_page(anio, nombre):
     """Renderiza votar.html SIN login, para diagnosticar problemas de template."""
     import traceback
+    from urllib.parse import unquote
+    nombre = unquote(nombre)
+    anio = unquote(anio)
     try:
         alumnos_actuales = obtener_alumnos_por_anio()
         alumnos = alumnos_actuales.get(anio, [])
@@ -560,6 +563,9 @@ def home():
 @login_required
 def votar(anio, nombre):
     import sys, traceback
+    from urllib.parse import unquote
+    nombre = unquote(nombre)
+    anio = unquote(anio)
     print(f"[VOTAR] {request.method} anio={anio} nombre={nombre}", flush=True)
     try:
         return _votar_inner(anio, nombre)
@@ -734,6 +740,9 @@ def _votar_inner(anio, nombre):
 @login_required
 def trivia_educativa(anio, nombre):
     """Trivia educativa antes de votar"""
+    from urllib.parse import unquote
+    nombre = unquote(nombre)
+    anio = unquote(anio)
     # ✅ CORREGIDO: Usar función que lee archivo actual
     alumnos_actuales = obtener_alumnos_por_anio()
     alumnos = alumnos_actuales.get(anio, [])
