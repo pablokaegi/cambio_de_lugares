@@ -581,8 +581,24 @@ def _votar_inner(anio, nombre):
     alumnos = alumnos_actuales.get(anio, [])
     
     if nombre not in alumnos:
-        flash('Alumno no encontrado en este año', 'error')
-        return redirect(url_for('home', anio=anio))
+        # DEBUG: mostrar exactamente qué nombre llegó vs lista
+        from urllib.parse import unquote, unquote_plus
+        repr_nombre = repr(nombre)
+        repr_lista = repr(alumnos[:3])
+        double_unquoted = unquote(unquote(nombre))
+        plus_unquoted = unquote_plus(nombre)
+        raw_path = request.environ.get('PATH_INFO', 'N/A')
+        return (
+            f"<h2>DEBUG: Alumno no encontrado</h2>"
+            f"<p><b>nombre recibido (repr):</b> {repr_nombre}</p>"
+            f"<p><b>len:</b> {len(nombre)}</p>"
+            f"<p><b>double unquote:</b> {repr(double_unquoted)}</p>"
+            f"<p><b>unquote_plus:</b> {repr(plus_unquoted)}</p>"
+            f"<p><b>PATH_INFO raw:</b> {raw_path}</p>"
+            f"<p><b>primeros 3 de lista:</b> {repr_lista}</p>"
+            f"<p><b>bytes nombre:</b> {nombre.encode('utf-8').hex()}</p>"
+            f"<p><b>bytes lista[0]:</b> {alumnos[0].encode('utf-8').hex() if alumnos else 'vacia'}</p>"
+        ), 200
     
     # Cargar votos existentes desde la base de datos
     votos_bd = db_manager.obtener_votos_por_anio(anio)
