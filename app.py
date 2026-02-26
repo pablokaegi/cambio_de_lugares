@@ -444,6 +444,22 @@ def diag():
     info['python_version'] = sys.version
     return jsonify(info)
 
+@app.route("/test_votar_page/<anio>/<nombre>")
+def test_votar_page(anio, nombre):
+    """Renderiza votar.html SIN login, para diagnosticar problemas de template."""
+    import traceback
+    try:
+        alumnos_actuales = obtener_alumnos_por_anio()
+        alumnos = alumnos_actuales.get(anio, [])
+        if nombre not in alumnos:
+            return f"<h1>Alumno '{nombre}' no encontrado en {anio}</h1><p>Alumnos disponibles: {alumnos[:5]}...</p>", 404
+        otros = [a for a in alumnos if a != nombre]
+        import random
+        muestra = random.sample(otros, min(5, len(otros)))
+        return render_template('votar.html', nombre=nombre, anio=anio, alumnos=muestra)
+    except Exception as e:
+        return f"<h1>Error rendering votar.html</h1><pre>{traceback.format_exc()}</pre>", 500
+
 @app.route("/test_vote/<anio>")
 def test_vote(anio):
     """Test completo: inserta un voto de prueba, lo lee, lo borra. Sin login."""
@@ -543,6 +559,17 @@ def home():
 @app.route('/votar/<anio>/<nombre>', methods=['GET', 'POST'])
 @login_required
 def votar(anio, nombre):
+    import sys, traceback
+    print(f"[VOTAR] {request.method} anio={anio} nombre={nombre}", flush=True)
+    try:
+        return _votar_inner(anio, nombre)
+    except Exception as e:
+        print(f"[VOTAR] CRASH: {e}", flush=True)
+        traceback.print_exc()
+        # En vez de 500, mostrar el error
+        return f"<h1>Error en /votar</h1><pre>{traceback.format_exc()}</pre>", 500
+
+def _votar_inner(anio, nombre):
     # ✅ CORREGIDO: Usar función que lee archivo actual
     alumnos_actuales = obtener_alumnos_por_anio()
     alumnos = alumnos_actuales.get(anio, [])
