@@ -380,6 +380,70 @@ def index():
     else:
         return redirect(url_for('login'))
 
+@app.route("/diag")
+def diag():
+    """Endpoint de diagnóstico - muestra estado completo del sistema"""
+    import sys, traceback
+    from flask import jsonify
+    info = {'backend': db_manager.backend, 'errors': []}
+    try:
+        with db_manager._connect() as conn:
+            cursor = conn.cursor()
+            info['connection'] = 'OK'
+            # Listar tablas
+            if db_manager.backend == 'mysql':
+                cursor.execute("SHOW TABLES")
+                info['tables'] = [r[0] for r in cursor.fetchall()]
+            else:
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                info['tables'] = [r[0] for r in cursor.fetchall()]
+            # Contar filas
+            info['row_counts'] = {}
+            for t in info['tables']:
+                try:
+                    cursor.execute(f"SELECT COUNT(*) FROM {t}")
+                    info['row_counts'][t] = cursor.fetchone()[0]
+                except Exception as e:
+                    info['row_counts'][t] = f"ERROR: {e}"
+            # Config aula
+            try:
+                info['config_aula'] = db_manager.cargar_configuracion_aula()
+            except Exception as e:
+                info['config_aula'] = f"ERROR: {e}"
+            # Votos por año
+            info['votos_por_anio'] = {}
+            alumnos_act = obtener_alumnos_por_anio()
+            info['anios_disponibles'] = list(alumnos_act.keys())
+            info['alumnos_count'] = {k: len(v) for k, v in alumnos_act.items()}
+            for anio in alumnos_act.keys():
+                try:
+                    votos = db_manager.obtener_votos_por_anio(anio)
+                    info['votos_por_anio'][anio] = len(votos) if votos else 0
+                except Exception as e:
+                    info['votos_por_anio'][anio] = f"ERROR: {e}"
+            # Test write
+            try:
+                cursor.execute(db_manager._ph(
+                    "SELECT COUNT(*) FROM db_migrations WHERE migration_id = ?"
+                ), ('diag_test',))
+                info['test_read'] = 'OK'
+            except Exception as e:
+                info['test_read'] = f"ERROR: {e}"
+    except Exception as e:
+        info['connection'] = f"FAILED: {e}"
+        info['traceback'] = traceback.format_exc()
+    # Env vars (sin password)
+    info['env'] = {
+        'DB_HOST': os.environ.get('DB_HOST', '(not set)'),
+        'DB_USER': os.environ.get('DB_USER', '(not set)'),
+        'DB_NAME': os.environ.get('DB_NAME', '(not set)'),
+        'DB_PASSWORD': '***' if os.environ.get('DB_PASSWORD') else '(not set)',
+        'SECRET_KEY': '***' if os.environ.get('SECRET_KEY') else '(not set)',
+    }
+    info['usuarios_cargados'] = len(USUARIOS_DOCENTES)
+    info['python_version'] = sys.version
+    return jsonify(info)
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if 'logged_in' in session:
@@ -473,7 +537,12 @@ def votar(anio, nombre):
                              alumnos=alumnos_a_evaluar)
     
     # POST - procesar votación
+    import sys, traceback
+    print(f"[VOTAR POST] anio={anio}, nombre={nombre}", flush=True)
+    print(f"[VOTAR POST] form keys: {list(request.form.keys())}", flush=True)
+
     alumnos_a_evaluar = session.get(f'alumnos_evaluar_{anio}_{nombre}', [])
+    print(f"[VOTAR POST] session alumnos_a_evaluar: {alumnos_a_evaluar}", flush=True)
 
     # Fallback: si la sesión no persistió, reconstruir la lista desde el formulario
     if not alumnos_a_evaluar:
@@ -482,8 +551,10 @@ def votar(anio, nombre):
             for key in request.form.keys()
             if key.startswith('rating_') and request.form[key]
         ]
+        print(f"[VOTAR POST] fallback alumnos_a_evaluar: {alumnos_a_evaluar}", flush=True)
 
     if not alumnos_a_evaluar:
+        print(f"[VOTAR POST] ERROR: lista vacia, redirigiendo", flush=True)
         flash('Error en la sesión. Intenta nuevamente.', 'error')
         return redirect(url_for('votar', anio=anio, nombre=nombre))
 
@@ -535,13 +606,20 @@ def votar(anio, nombre):
     voto_data['puntos_obtenidos'] = puntos_obtenidos
     
     # 🔥 CORREGIDO: GUARDAR EL VOTO EN LA BASE DE DATOS
-    exito_guardado = db_manager.guardar_voto(
-        anio=anio,
-        alumno=nombre,
-        calificaciones=ratings,
-        alumno_bloqueado=bloqueado,
-        timestamp=voto_data['fecha']
-    )
+    print(f"[VOTAR POST] guardando voto: ratings={ratings}, bloqueado={bloqueado}", flush=True)
+    try:
+        exito_guardado = db_manager.guardar_voto(
+            anio=anio,
+            alumno=nombre,
+            calificaciones=ratings,
+            alumno_bloqueado=bloqueado,
+            timestamp=voto_data['fecha']
+        )
+        print(f"[VOTAR POST] guardar_voto resultado: {exito_guardado}", flush=True)
+    except Exception as e:
+        print(f"[VOTAR POST] EXCEPTION en guardar_voto: {e}", flush=True)
+        traceback.print_exc()
+        exito_guardado = False
     
     if not exito_guardado:
         flash('❌ Error al guardar el voto en la base de datos', 'error')
@@ -551,8 +629,14 @@ def votar(anio, nombre):
     datos_trivia = session.get(f'resultado_trivia_{anio}_{nombre}')
     
     # ✅ GAMIFICACIÓN: Actualizar ranking con trivia
-    alumno_stats = actualizar_ranking_clase(anio, nombre, puntos_obtenidos, datos_trivia)
-    badges_nuevos = otorgar_badges_trivia(alumno_stats, datos_trivia)
+    try:
+        alumno_stats = actualizar_ranking_clase(anio, nombre, puntos_obtenidos, datos_trivia)
+        badges_nuevos = otorgar_badges_trivia(alumno_stats, datos_trivia)
+    except Exception as e:
+        print(f"[VOTAR POST] EXCEPTION en gamificacion: {e}", flush=True)
+        traceback.print_exc()
+        alumno_stats = {'nivel': 1}
+        badges_nuevos = []
     
     # Limpiar la sesión
     session.pop(f'alumnos_evaluar_{anio}_{nombre}', None)
