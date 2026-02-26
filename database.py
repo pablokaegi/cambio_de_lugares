@@ -492,7 +492,7 @@ class DatabaseManager:
             return {
                 'filas_maximas': 6, 
                 'columnas_por_fila': 6,
-                'trivia_obligatoria': True
+                'trivia_obligatoria': False
             }
     
     def obtener_votos_por_anio(self, anio):

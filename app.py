@@ -475,6 +475,14 @@ def votar(anio, nombre):
     # POST - procesar votación
     alumnos_a_evaluar = session.get(f'alumnos_evaluar_{anio}_{nombre}', [])
 
+    # Fallback: si la sesión no persistió, reconstruir la lista desde el formulario
+    if not alumnos_a_evaluar:
+        alumnos_a_evaluar = [
+            key.replace('rating_', '', 1)
+            for key in request.form.keys()
+            if key.startswith('rating_') and request.form[key]
+        ]
+
     if not alumnos_a_evaluar:
         flash('Error en la sesión. Intenta nuevamente.', 'error')
         return redirect(url_for('votar', anio=anio, nombre=nombre))
