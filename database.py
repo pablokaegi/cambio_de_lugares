@@ -142,6 +142,21 @@ class DatabaseManager:
                 cursor.execute('UPDATE configuracion_aula SET trivia_obligatoria = 0 WHERE trivia_obligatoria = 1')
                 cursor.execute("INSERT INTO db_migrations (migration_id) VALUES ('fix_trivia_default_false')")
 
+            # Migración: limpiar trivia_obligatoria del JSON blob (el JSON sobreescribía la columna)
+            cursor.execute("SELECT COUNT(*) FROM db_migrations WHERE migration_id = 'fix_trivia_json_blob'")
+            if cursor.fetchone()[0] == 0:
+                cursor.execute('SELECT id, configuracion_json FROM configuracion_aula WHERE configuracion_json IS NOT NULL')
+                for row_id, json_text in cursor.fetchall():
+                    try:
+                        cfg = json.loads(json_text)
+                        if 'trivia_obligatoria' in cfg:
+                            cfg.pop('trivia_obligatoria')
+                            cursor.execute('UPDATE configuracion_aula SET configuracion_json = ? WHERE id = ?',
+                                           (json.dumps(cfg), row_id))
+                    except:
+                        pass
+                cursor.execute("INSERT INTO db_migrations (migration_id) VALUES ('fix_trivia_json_blob')")
+
             # Tabla para encuesta de conformidad post-asignación
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS conformidad (
@@ -486,16 +501,20 @@ class DatabaseManager:
             
             row = cursor.fetchone()
             if row:
+                # El valor de la columna trivia_obligatoria es la fuente de verdad
+                trivia_val = bool(row[2])
                 base_config = {
                     'filas_maximas': row[0],
                     'columnas_por_fila': row[1], 
-                    'trivia_obligatoria': bool(row[2])
+                    'trivia_obligatoria': trivia_val
                 }
                 
                 # Agregar configuración adicional del JSON si existe
                 if row[3]:
                     try:
                         json_config = json.loads(row[3])
+                        # Quitar trivia_obligatoria del JSON para que no sobreescriba la columna
+                        json_config.pop('trivia_obligatoria', None)
                         base_config.update(json_config)
                     except:
                         pass
