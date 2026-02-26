@@ -11,12 +11,19 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, U
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.pool import NullPool
 
-# Configuración de la conexión a base de datos
-# Lee de variable de entorno o usa SQLite por defecto
-DATABASE_URL = os.environ.get(
-    'DATABASE_URL', 
-    'sqlite:///alumnos_app.db'
-)
+# Configuracion de la conexion a base de datos
+# Lee de variables de entorno (mismas que database.py) o usa SQLite por defecto
+from dotenv import load_dotenv
+load_dotenv()
+
+_db_host = os.environ.get('DB_HOST', '')
+if _db_host:
+    _user = os.environ.get('DB_USER', '')
+    _pw   = os.environ.get('DB_PASSWORD', '')
+    _name = os.environ.get('DB_NAME', '')
+    DATABASE_URL = f'mysql+pymysql://{_user}:{_pw}@{_db_host}/{_name}?charset=utf8mb4'
+else:
+    DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///alumnos_app.db')
 
 # Crear el motor de base de datos
 # NullPool evita problemas de conexiones en cPanel
