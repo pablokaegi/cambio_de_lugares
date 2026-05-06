@@ -17,15 +17,19 @@ class GestorAlumnos:
         self.alumnos_por_anio = self._cargar_datos()
     
     def _cargar_datos(self) -> Dict[str, List[str]]:
-        """Carga los datos de alumnos desde archivo JSON"""
+        """Carga los datos de alumnos desde archivo JSON soportando múltiples encodings"""
         if os.path.exists(self.archivo_datos):
-            try:
-                with open(self.archivo_datos, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except (json.JSONDecodeError, FileNotFoundError):
-                pass
+            encodings = ['utf-8', 'latin-1', 'cp1252']
+            for encoding in encodings:
+                try:
+                    with open(self.archivo_datos, 'r', encoding=encoding) as f:
+                        return json.load(f)
+                except UnicodeDecodeError:
+                    continue  # Probar siguiente encoding
+                except (json.JSONDecodeError, FileNotFoundError):
+                    break  # Si el JSON está roto o no existe, no intentar otro encoding
         
-        # Datos por defecto si no existe el archivo
+        # Datos por defecto si no existe el archivo o falla todo
         return self._obtener_datos_por_defecto()
     
     def _obtener_datos_por_defecto(self) -> Dict[str, List[str]]:
