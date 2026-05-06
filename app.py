@@ -7,6 +7,7 @@ from functools import wraps
 from collections import Counter, defaultdict
 from datetime import datetime
 from dotenv import load_dotenv
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
 
@@ -19,6 +20,7 @@ from gestor_alumnos import gestor_alumnos, obtener_alumnos_por_anio
 from analizador_psicopedagogico import analizador_psicopedagogico
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.secret_key = os.environ.get('SECRET_KEY', 'puertas_del_sol_secret_key_2024')
 
 # Configurar el analizador psicopedagógico con la base de datos
