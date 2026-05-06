@@ -385,7 +385,9 @@ def index():
     if 'logged_in' in session:
         return redirect('/home')
     else:
-        return redirect('/login')
+        # En vez de redirigir a /login, renderizamos directamente el login aquí
+        # para cortar cualquier posible bucle de redirección a nivel de Apache/Passenger
+        return render_template("login.html")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -404,7 +406,10 @@ def login():
             return redirect('/home')
         else:
             flash("Usuario o contraseña incorrectos", "error")
+            # Si hay error, renderiza aquí mismo
+            return render_template("login.html")
     
+    # Si entran por GET a /login, simplemente renderizar
     return render_template("login.html")
 
 @app.route("/logout")
