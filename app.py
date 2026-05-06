@@ -32,17 +32,21 @@ USUARIOS_DOCENTES = {}
 
 # 2. SEGUNDO: Definir las funciones helper
 def cargar_json_seguro(archivo):
-    """Función helper para cargar archivos JSON de forma segura"""
+    """Función helper para cargar archivos JSON de forma segura con múltiples encodings"""
     if os.path.exists(archivo):
-        try:
-            with open(archivo, encoding='utf-8') as f:
-                content = f.read().strip()
-                if content:
-                    return json.loads(content)
-                else:
-                    return {}
-        except (json.JSONDecodeError, FileNotFoundError):
-            return {}
+        encodings = ['utf-8', 'latin-1', 'cp1252']
+        for encoding in encodings:
+            try:
+                with open(archivo, encoding=encoding) as f:
+                    content = f.read().strip()
+                    if content:
+                        return json.loads(content)
+                    else:
+                        return {}
+            except UnicodeDecodeError:
+                continue  # Probar siguiente encoding
+            except (json.JSONDecodeError, FileNotFoundError):
+                break  # Si el JSON está roto o no existe, detenerse
     return {}
 
 def guardar_json_seguro(archivo, datos):
