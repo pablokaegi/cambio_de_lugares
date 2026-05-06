@@ -551,34 +551,6 @@ def test_vote(anio):
     ) else 'ALGO FALLO'
     return jsonify(result)
 
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if 'logged_in' in session:
-        return redirect(url_for('home'))
-        
-    if request.method == "POST":
-        usuario = request.form.get('usuario')
-        password = request.form.get('password')
-        
-        if usuario in USUARIOS_DOCENTES and USUARIOS_DOCENTES[usuario]['password'] == password:
-            session['logged_in'] = True
-            session['usuario'] = usuario
-            session['rol'] = USUARIOS_DOCENTES[usuario]['rol']
-            flash(f"¡Bienvenido/a {usuario}! ({USUARIOS_DOCENTES[usuario]['rol'].title()})", "success")
-            return redirect(url_for('home'))
-        else:
-            flash("Usuario o contraseña incorrectos", "error")
-    
-    return render_template("login.html")
-
-@app.route("/logout")
-@login_required
-def logout():
-    usuario = session.get('usuario', 'Usuario')
-    session.clear()
-    flash(f"¡Hasta luego {usuario}! Sesión cerrada exitosamente", "info")
-    return redirect(url_for('login'))
-
 @app.route("/home")
 @login_required
 def home():
