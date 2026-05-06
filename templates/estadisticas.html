@@ -39,7 +39,7 @@
                     <div class="col-md-3">
                         <div class="card text-center">
                             <div class="card-body">
-                                <h5 class="card-title">🚫 Bloqueos</h5>
+                                <h5 class="card-title">🚫 Distancia Solicitada</h5>
                                 <h2 class="text-warning">{{total_bloqueos}}</h2>
                                 <small class="text-muted">Total registrados</small>
                             </div>
@@ -50,18 +50,18 @@
                             <div class="card-body">
                                 <h5 class="card-title">💥 Conflictos</h5>
                                 <h2 class="text-danger">{{bloqueos_mutuos|length}}</h2>
-                                <small class="text-muted">Bloqueos mutuos</small>
+                                <small class="text-muted">Mutuos registrados</small>
                             </div>
                         </div>
                     </div>
                 </div>
-
+                
                 <!-- Top Alumnos -->
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header">
-                                <h5><i class="fas fa-trophy text-warning"></i> Más Populares</h5>
+                                <h5><i class="fas fa-trophy text-warning"></i> Con mejor valoración grupal</h5>
                             </div>
                             <div class="card-body">
                                 {% for alumno, stats in alumnos_populares %}
@@ -80,20 +80,21 @@
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header">
-                                <h5><i class="fas fa-ban text-danger"></i> Más Bloqueados</h5>
+                                <h5><i class="fas fa-ban text-danger"></i> Con mayor registro de inafinidad</h5>
                             </div>
                             <div class="card-body">
                                 {% for alumno, cantidad in alumnos_mas_bloqueados %}
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span>{{loop.index}}. {{alumno[:25]}}</span>
-                                    <span class="badge bg-danger">{{cantidad}} bloqueo(s)</span>
+                                    <span class="badge bg-danger">{{cantidad}} señalamiento(s)</span>
                                 </div>
                                 {% else %}
-                                <p class="text-success">✅ ¡No hay bloqueos registrados!</p>
+                                <p class="text-success">✅ ¡No hay registros de inafinidad!</p>
                                 {% endfor %}
                             </div>
                         </div>
                     </div>
+
                 </div>
 
                 <!-- Afinidades Mutuas -->
