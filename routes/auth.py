@@ -28,7 +28,7 @@ def role_required(*roles):
             user_rol = session.get('rol', '')
             if user_rol not in roles:
                 flash("No tienes permisos para acceder a esta sección", "error")
-                return redirect(url_for('main.home'))
+                return redirect(url_for('home'))
             
             return f(*args, **kwargs)
         return decorated_function
@@ -36,9 +36,9 @@ def role_required(*roles):
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
-    from app import USUARIOS_DOCENTES # Import here to avoid circularity if possible
+    from app import USUARIOS_DOCENTES 
     if 'logged_in' in session:
-        return redirect(url_for('main.home'))
+        return redirect(url_for('home'))
         
     if request.method == "POST":
         usuario = request.form.get('usuario')
@@ -49,7 +49,7 @@ def login():
             session['usuario'] = usuario
             session['rol'] = USUARIOS_DOCENTES[usuario]['rol']
             flash(f"¡Bienvenido/a {usuario}! ({USUARIOS_DOCENTES[usuario]['rol'].title()})", "success")
-            return redirect(url_for('main.home'))
+            return redirect(url_for('home'))
         else:
             flash("Usuario o contraseña incorrectos", "error")
     

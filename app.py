@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from routes.auth import auth_bp
 from routes.votacion import votacion_bp
 from routes.psicopedagogia import psicopedagogia_bp
+from routes.main import main_bp
 
 # ...
 
@@ -19,6 +20,7 @@ from routes.psicopedagogia import psicopedagogia_bp
 app.register_blueprint(auth_bp)
 app.register_blueprint(votacion_bp)
 app.register_blueprint(psicopedagogia_bp)
+app.register_blueprint(main_bp)
 
 # ... (resto de funciones compartidas que no dependen de rutas) ...
 
@@ -345,62 +347,9 @@ def calcular_disposicion_aula(num_alumnos):
     filas = math.ceil(num_alumnos / 6)
     return 6, filas
 
-# RUTAS
-@app.route("/")
-def index():
-    if 'logged_in' in session:
-        return redirect(url_for('home'))
-    else:
-        return redirect(url_for('auth.login'))
-
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if 'logged_in' in session:
-        return redirect(url_for('home'))
-        
-    if request.method == "POST":
-        usuario = request.form.get('usuario')
-        password = request.form.get('password')
-        
-        if usuario in USUARIOS_DOCENTES and USUARIOS_DOCENTES[usuario]['password'] == password:
-            session['logged_in'] = True
-            session['usuario'] = usuario
-            session['rol'] = USUARIOS_DOCENTES[usuario]['rol']
-            flash(f"¡Bienvenido/a {usuario}! ({USUARIOS_DOCENTES[usuario]['rol'].title()})", "success")
-            return redirect(url_for('home'))
-        else:
-            flash("Usuario o contraseña incorrectos", "error")
-    
-    return render_template("login.html")
-
-@app.route("/logout")
-@login_required
-def logout():
-    usuario = session.get('usuario', 'Usuario')
-    session.clear()
-    flash(f"¡Hasta luego {usuario}! Sesión cerrada exitosamente", "info")
-    return redirect(url_for('login'))
-
-@app.route("/home")
-@login_required
-def home():
-    anio = request.args.get('anio', '')
-    
-    # ✅ CORREGIDO: Usar función que lee archivo actual
-    alumnos_actuales = obtener_alumnos_por_anio()
-    alumnos = alumnos_actuales.get(anio, [])
-    
-    # Obtener votos desde la base de datos
-    votos_bd = db_manager.obtener_votos_por_anio(anio) if anio else {}
-    ya_votaron = set(votos_bd.keys())
-    
-    return render_template("home.html", 
-                         alumnos=alumnos, 
-                         ya_votaron=ya_votaron, 
-                         anio=anio, 
-                         alumnos_por_anio=alumnos_actuales,  # ✅ También corregido aquí
-                         usuario=session.get('usuario'),
-                         rol=session.get('rol'))
+# RUTAS (Ahora gestionadas por Blueprints)
+# (Las rutas se han movido a routes/auth.py, routes/votacion.py, routes/psicopedagogia.py)
+# Las siguientes rutas se han eliminado de app.py para evitar duplicados.
 
 @app.route('/votar/<anio>/<nombre>', methods=['GET', 'POST'])
 @login_required
