@@ -1,1 +1,0 @@
-USUARIOS_DOCENTES = {}

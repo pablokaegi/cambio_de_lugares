@@ -8,29 +8,25 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from dotenv import load_dotenv
 
-# ... ( imports )
-from routes.auth import auth_bp
-from routes.votacion import votacion_bp
-from routes.psicopedagogia import psicopedagogia_bp
-from routes.main import main_bp
+load_dotenv()
 
-# ...
+# Importar el manejador de base de datos
+from database import db_manager
 
-# Registrar Blueprints
-app.register_blueprint(auth_bp)
-app.register_blueprint(votacion_bp)
-app.register_blueprint(psicopedagogia_bp)
-app.register_blueprint(main_bp)
+# Importar módulos modularizados
+from preguntas_trivia import banco_preguntas, obtener_pregunta_aleatoria
+from gestor_alumnos import gestor_alumnos, obtener_alumnos_por_anio
+from analizador_psicopedagogico import analizador_psicopedagogico
 
-# ... (resto de funciones compartidas que no dependen de rutas) ...
-
+app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'puertas_del_sol_secret_key_2024')
 
 # Configurar el analizador psicopedagógico con la base de datos
 analizador_psicopedagogico.db_manager = db_manager
 
-# 1. PRIMERO: Usuarios base — se cargan desde usuarios.json
+# 1. PRIMERO: Usuarios base — se cargan desde usuarios.json (ver .gitignore)
+# Las contraseñas NO deben estar en el código fuente.
 USUARIOS_DOCENTES = {}
-# ... (mantener funciones helper)
 
 # 2. SEGUNDO: Definir las funciones helper
 def cargar_json_seguro(archivo):
@@ -309,7 +305,36 @@ else:
     print("[ADVERTENCIA] Creá usuarios.json con el formato: {'usuario': {'password': '...', 'rol': '...'}}")
     print("[ADVERTENCIA] Roles válidos: administrador, psicopedagogo, profesor")
 
-# 4. CUARTO: Resto de tu código (alumnos, etc.)
+# 4. CUARTO: Resto de tu código (decoradores, alumnos, etc.)
+def login_required(f):
+    # ...tu código existente...
+
+# ...resto de tu código...
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'logged_in' not in session:
+            flash("Debes iniciar sesión para acceder al sistema", "warning")
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Decorador para roles específicos
+def role_required(*roles):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'logged_in' not in session:
+                flash("Debes iniciar sesión para acceder al sistema", "warning")
+                return redirect(url_for('login'))
+            
+            user_rol = session.get('rol', '')
+            if user_rol not in roles:
+                flash("No tienes permisos para acceder a esta sección", "error")
+                return redirect(url_for('home'))
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 # Obtener alumnos desde el gestor modularizado
 alumnos_por_anio = obtener_alumnos_por_anio()
@@ -347,9 +372,192 @@ def calcular_disposicion_aula(num_alumnos):
     filas = math.ceil(num_alumnos / 6)
     return 6, filas
 
-# RUTAS (Ahora gestionadas por Blueprints)
-# (Las rutas se han movido a routes/auth.py, routes/votacion.py, routes/psicopedagogia.py)
-# Las siguientes rutas se han eliminado de app.py para evitar duplicados.
+# RUTAS
+@app.route("/")
+def index():
+    if 'logged_in' in session:
+        return redirect(url_for('home'))
+    else:
+        return redirect(url_for('login'))
+
+@app.route("/diag")
+def diag():
+    """Endpoint de diagnóstico - muestra estado completo del sistema"""
+    import sys, traceback
+    from flask import jsonify
+    info = {'backend': db_manager.backend, 'errors': []}
+    try:
+        with db_manager._connect() as conn:
+            cursor = conn.cursor()
+            info['connection'] = 'OK'
+            # Listar tablas
+            if db_manager.backend == 'mysql':
+                cursor.execute("SHOW TABLES")
+                info['tables'] = [r[0] for r in cursor.fetchall()]
+            else:
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                info['tables'] = [r[0] for r in cursor.fetchall()]
+            # Contar filas
+            info['row_counts'] = {}
+            for t in info['tables']:
+                try:
+                    cursor.execute(f"SELECT COUNT(*) FROM {t}")
+                    info['row_counts'][t] = cursor.fetchone()[0]
+                except Exception as e:
+                    info['row_counts'][t] = f"ERROR: {e}"
+            # Config aula
+            try:
+                info['config_aula'] = db_manager.cargar_configuracion_aula()
+            except Exception as e:
+                info['config_aula'] = f"ERROR: {e}"
+            # Votos por año
+            info['votos_por_anio'] = {}
+            alumnos_act = obtener_alumnos_por_anio()
+            info['anios_disponibles'] = list(alumnos_act.keys())
+            info['alumnos_count'] = {k: len(v) for k, v in alumnos_act.items()}
+            for anio in alumnos_act.keys():
+                try:
+                    votos = db_manager.obtener_votos_por_anio(anio)
+                    info['votos_por_anio'][anio] = len(votos) if votos else 0
+                except Exception as e:
+                    info['votos_por_anio'][anio] = f"ERROR: {e}"
+            # Test write
+            try:
+                cursor.execute(db_manager._ph(
+                    "SELECT COUNT(*) FROM db_migrations WHERE migration_id = ?"
+                ), ('diag_test',))
+                info['test_read'] = 'OK'
+            except Exception as e:
+                info['test_read'] = f"ERROR: {e}"
+    except Exception as e:
+        info['connection'] = f"FAILED: {e}"
+        info['traceback'] = traceback.format_exc()
+    # Env vars (sin password)
+    info['env'] = {
+        'DB_HOST': os.environ.get('DB_HOST', '(not set)'),
+        'DB_USER': os.environ.get('DB_USER', '(not set)'),
+        'DB_NAME': os.environ.get('DB_NAME', '(not set)'),
+        'DB_PASSWORD': '***' if os.environ.get('DB_PASSWORD') else '(not set)',
+        'SECRET_KEY': '***' if os.environ.get('SECRET_KEY') else '(not set)',
+    }
+    info['usuarios_cargados'] = len(USUARIOS_DOCENTES)
+    info['python_version'] = sys.version
+    return jsonify(info)
+
+@app.route("/test_votar_page/<anio>/<nombre>")
+def test_votar_page(anio, nombre):
+    """Renderiza votar.html SIN login, para diagnosticar problemas de template."""
+    import traceback
+    from urllib.parse import unquote
+    nombre = unquote(nombre)
+    anio = unquote(anio)
+    try:
+        alumnos_actuales = obtener_alumnos_por_anio()
+        alumnos = alumnos_actuales.get(anio, [])
+        if nombre not in alumnos:
+            return f"<h1>Alumno '{nombre}' no encontrado en {anio}</h1><p>Alumnos disponibles: {alumnos[:5]}...</p>", 404
+        otros = [a for a in alumnos if a != nombre]
+        import random
+        muestra = random.sample(otros, min(5, len(otros)))
+        return render_template('votar.html', nombre=nombre, anio=anio, alumnos=muestra)
+    except Exception as e:
+        return f"<h1>Error rendering votar.html</h1><pre>{traceback.format_exc()}</pre>", 500
+
+@app.route("/test_vote/<anio>")
+def test_vote(anio):
+    """Test completo: inserta un voto de prueba, lo lee, lo borra. Sin login."""
+    from flask import jsonify
+    import traceback
+    result = {'anio': anio, 'steps': []}
+
+    alumnos_act = obtener_alumnos_por_anio()
+    if anio not in alumnos_act or len(alumnos_act[anio]) < 3:
+        return jsonify({'error': f'Año {anio} no encontrado o sin suficientes alumnos'}), 400
+
+    test_alumno = '__TEST_VOTE__'
+    test_ratings = {alumnos_act[anio][0]: 5, alumnos_act[anio][1]: 3}
+    test_ts = datetime.now().isoformat()
+
+    # Step 1: guardar voto
+    try:
+        ok = db_manager.guardar_voto(anio, test_alumno, test_ratings, None, test_ts)
+        result['steps'].append({'guardar_voto': ok})
+    except Exception as e:
+        result['steps'].append({'guardar_voto': f'EXCEPTION: {e}', 'tb': traceback.format_exc()})
+        return jsonify(result), 500
+
+    # Step 2: leer voto
+    try:
+        votos = db_manager.obtener_votos_por_anio(anio)
+        found = test_alumno in votos
+        result['steps'].append({'leer_voto': found, 'voto_data': votos.get(test_alumno, 'NOT FOUND')})
+    except Exception as e:
+        result['steps'].append({'leer_voto': f'EXCEPTION: {e}'})
+
+    # Step 3: borrar voto de prueba
+    try:
+        with db_manager._connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute(db_manager._ph('DELETE FROM votos WHERE anio = ? AND alumno = ?'),
+                           (anio, test_alumno))
+            result['steps'].append({'borrar_voto': 'OK'})
+    except Exception as e:
+        result['steps'].append({'borrar_voto': f'EXCEPTION: {e}'})
+
+    result['conclusion'] = 'DB write/read/delete OK' if all(
+        s.get('guardar_voto') is True or s.get('leer_voto') is True or s.get('borrar_voto') == 'OK'
+        for s in result['steps']
+    ) else 'ALGO FALLO'
+    return jsonify(result)
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if 'logged_in' in session:
+        return redirect(url_for('home'))
+        
+    if request.method == "POST":
+        usuario = request.form.get('usuario')
+        password = request.form.get('password')
+        
+        if usuario in USUARIOS_DOCENTES and USUARIOS_DOCENTES[usuario]['password'] == password:
+            session['logged_in'] = True
+            session['usuario'] = usuario
+            session['rol'] = USUARIOS_DOCENTES[usuario]['rol']
+            flash(f"¡Bienvenido/a {usuario}! ({USUARIOS_DOCENTES[usuario]['rol'].title()})", "success")
+            return redirect(url_for('home'))
+        else:
+            flash("Usuario o contraseña incorrectos", "error")
+    
+    return render_template("login.html")
+
+@app.route("/logout")
+@login_required
+def logout():
+    usuario = session.get('usuario', 'Usuario')
+    session.clear()
+    flash(f"¡Hasta luego {usuario}! Sesión cerrada exitosamente", "info")
+    return redirect(url_for('login'))
+
+@app.route("/home")
+@login_required
+def home():
+    anio = request.args.get('anio', '')
+    
+    # ✅ CORREGIDO: Usar función que lee archivo actual
+    alumnos_actuales = obtener_alumnos_por_anio()
+    alumnos = alumnos_actuales.get(anio, [])
+    
+    # Obtener votos desde la base de datos
+    votos_bd = db_manager.obtener_votos_por_anio(anio) if anio else {}
+    ya_votaron = set(votos_bd.keys())
+    
+    return render_template("home.html", 
+                         alumnos=alumnos, 
+                         ya_votaron=ya_votaron, 
+                         anio=anio, 
+                         alumnos_por_anio=alumnos_actuales,  # ✅ También corregido aquí
+                         usuario=session.get('usuario'),
+                         rol=session.get('rol'))
 
 @app.route('/votar/<anio>/<nombre>', methods=['GET', 'POST'])
 @login_required

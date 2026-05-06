@@ -101,7 +101,7 @@ class AnalizadorVotaciones:
         """Muestra estadísticas básicas"""
         print(f"👥 Participantes: {stats['total_votantes']}")
         print(f"⭐ Total evaluaciones: {stats['total_ratings']}")
-        print(f"🚫 Distancia solicitada: {stats['total_bloqueos']}")
+        print(f"🚫 Total bloqueos: {stats['total_bloqueos']}")
         print(f"📊 Promedio evaluaciones por persona: {stats['promedio_ratings_por_persona']:.1f}")
         
         print("\n📈 Distribución de puntuaciones:")
@@ -143,14 +143,14 @@ class AnalizadorVotaciones:
             reverse=True
         )
         
-        print("🏆 TOP 10 CON MEJOR VALORACIÓN GRUPAL:")
+        print("🏆 TOP 10 MÁS POPULARES:")
         for i, (alumno, stats) in enumerate(alumnos_ordenados[:10], 1):
             print(f"{i:2d}. {alumno[:25]:25s} | "
                   f"⭐{stats['promedio']:.2f} | "
                   f"📊{stats['total_votos']:2d} votos | "
                   f"🎯{stats['desviacion']:.2f} desv")
         
-        print("\n⚠️  BOTTOM 5 CON MENOR VALORACIÓN GRUPAL:")
+        print("\n⚠️  BOTTOM 5 MENOS POPULARES:")
         for i, (alumno, stats) in enumerate(alumnos_ordenados[-5:], 1):
             print(f"{i:2d}. {alumno[:25]:25s} | "
                   f"⭐{stats['promedio']:.2f} | "
@@ -180,12 +180,12 @@ class AnalizadorVotaciones:
                         bloqueos_mutuos.append(par_bloqueado)
         
         if not bloqueos_recibidos:
-            print("✅ ¡Excelente! No hay registros de inafinidad")
+            print("✅ ¡Excelente! No hay bloqueos registrados")
             return
         
-        print("🚨 REGISTRO DE INAFINIDAD:")
+        print("🚨 ALUMNOS MÁS BLOQUEADOS:")
         for alumno, cantidad in bloqueos_recibidos.most_common(10):
-            print(f"   {alumno[:30]:30s} | {cantidad} señalamiento(s)")
+            print(f"   {alumno[:30]:30s} | {cantidad} bloqueo(s)")
         
         if bloqueos_mutuos:
             print(f"\n💥 CONFLICTOS MUTUOS ({len(bloqueos_mutuos)}):")

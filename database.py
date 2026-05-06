@@ -605,35 +605,26 @@ class DatabaseManager:
                 return False, 0
 
     # ==================================================================
-    #  CONFIGURACION DEL AULA (MIGRACIÓN COMPLETA A SQL)
+    #  CONFIGURACION DEL AULA
     # ==================================================================
     def guardar_configuracion_aula(self, config_dict):
-        """Guarda configuraciones en tabla SQL, eliminando dependencia de JSON externo."""
         with self._connect() as conn:
             cursor = conn.cursor()
             try:
-                # Limpiar tabla
                 cursor.execute('DELETE FROM configuracion_aula')
-                
-                # Insertar configuración
-                # Separamos valores explícitos de configuración extra en JSON
-                filas = config_dict.get('filas_maximas', 6)
-                columnas = config_dict.get('columnas_por_fila', 6)
-                trivia_obl = config_dict.get('trivia_obligatoria', False)
-                
-                # Solo guardamos en JSON lo que no tiene columna propia
-                extra_config = {
-                    k: v for k, v in config_dict.items() 
-                    if k not in ['filas_maximas', 'columnas_por_fila', 'trivia_obligatoria']
-                }
-                
+                json_limpio = {k: v for k, v in config_dict.items() if k != 'trivia_obligatoria'}
                 cursor.execute(self._ph('''
                     INSERT INTO configuracion_aula (filas, columnas, trivia_obligatoria, configuracion_json)
                     VALUES (?, ?, ?, ?)
-                '''), (filas, columnas, trivia_obl, json.dumps(extra_config)))
+                '''), (
+                    config_dict.get('filas_maximas', 6),
+                    config_dict.get('columnas_por_fila', 6),
+                    config_dict.get('trivia_obligatoria', False),
+                    json.dumps(json_limpio),
+                ))
                 return True
             except Exception as e:
-                print(f"Error guardando configuración en DB: {e}")
+                print(f"Error guardando configuracion: {e}")
                 return False
 
     def cargar_configuracion_aula(self):
